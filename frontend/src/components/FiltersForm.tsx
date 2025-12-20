@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Form, Slider, message } from 'antd';
+import { Button, Divider, Form, Slider } from 'antd';
 
 type FiltersFormProps = {
   onFinish: (values: any) => void
@@ -12,22 +12,24 @@ const FiltersForm: React.FC<FiltersFormProps> = ({ onFinish }) => {
   return (
     <Form
       form={form}
-      labelCol={{ span: 4 }}
-      wrapperCol={{ span: 14 }}
       layout="vertical"
-      style={{ maxWidth: 600 }}
       onFinish={onFinish}
+      style={{ width: '100%' }}
     >
-      <Form.Item label="Slider" name="slider">
-        <Slider />
+      <Form.Item label="Price" name="slider">
+        <Slider range={{ draggableTrack: true }} defaultValue={[0, 1000000]} max={1000000} min={0} />
       </Form.Item>
 
-      <Form.Item label="Slider 2" name="slider2">
-        <Slider />
+      <Divider />
+
+      <Form.Item label="Years Forward" name="slider2">
+        <Slider range={{ draggableTrack: true }} defaultValue={[1, 10]} max={10} min={1} />
       </Form.Item>
+
+      <Divider />
 
       <Form.Item>
-        <Button type="primary" htmlType="submit">
+        <Button type="text" htmlType="submit" className="submit-button" style={{ backgroundColor: '#4e7d96', border:'none', color:'white' }}>
           Submit
         </Button>
       </Form.Item>

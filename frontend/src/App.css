@@ -1,109 +1,76 @@
+
+
+
+.header-container {
+  font-size: 50px;
+  padding: 20px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.form-container {
+  background-color: white;  
+  flex:1;
+  padding: 20px;
+  border-radius: 20px;
+  margin: 20px;
+}
+
+.map-container {
+  flex:2;
+  text-align: center;
+  font-size: 30px;
+  font-weight: bold;
+  border-radius: 20px;
+  background-color: white;
+  padding: 20px;
+  margin: 20px;
+}
+
 .app-container {
   display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  padding: 2rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.filters-form {
-  background: white;
-  padding: 2.5rem;
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  max-width: 600px;
+  flex-direction: column;
+  height: 100%;
   width: 100%;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.filters-form:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+.content-container {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  width: 100%;
 }
 
-.filters-form .ant-form-item-label > label {
-  font-weight: 600;
-  color: #333;
-  font-size: 14px;
-  margin-bottom: 8px;
+
+
+.form-container .ant-form {
+  width: 100%;
 }
 
-.filters-form .ant-slider {
-  margin: 16px 0;
+.form-container .ant-slider {
+  width: 98%;
 }
 
-.filters-form .ant-slider-rail {
-  background-color: #e0e0e0;
-  height: 6px;
+
+.form-container .ant-form-item-label {
+  font-size: 30px;
+  font-weight: bold;
 }
 
-.filters-form .ant-slider-track {
-  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-  height: 6px;
-}
-
-.filters-form .ant-slider-handle {
-  width: 20px;
-  height: 20px;
-  border: 3px solid #667eea;
-  background-color: white;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
-  transition: all 0.3s ease;
-}
-
-.filters-form .ant-slider-handle:hover {
-  border-color: #764ba2;
-  box-shadow: 0 4px 12px rgba(118, 75, 162, 0.6);
-  transform: scale(1.1);
-}
-
-.filters-form .ant-slider-handle:focus {
-  border-color: #764ba2;
-  box-shadow: 0 0 0 5px rgba(118, 75, 162, 0.2);
-}
-
-.filters-form .ant-btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border: none;
-  height: 42px;
-  padding: 0 32px;
-  font-weight: 600;
-  font-size: 15px;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-  transition: all 0.3s ease;
-  margin-top: 8px;
-}
-
-.filters-form .ant-btn-primary:hover {
-  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
-  transform: translateY(-2px);
-}
-
-.filters-form .ant-btn-primary:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
-}
-
-.filters-form .ant-form-item {
-  margin-bottom: 32px;
-}
-
-.filters-form .ant-form-item:last-of-type {
+.form-container .ant-form-item:last-child {
+  text-align: center;
   margin-bottom: 0;
 }
 
-/* Responsive design */
-@media (max-width: 768px) {
-  .app-container {
-    padding: 1rem;
-  }
-
-  .filters-form {
-    padding: 1.5rem;
-    border-radius: 12px;
-  }
+.submit-button {
+  transition: background-color 0.3s ease, transform 0.2s ease;
 }
 
+.submit-button:hover {
+  background-color: #6a9ab8 !important;
+  transform: translateY(-2px);
+}
+
+.submit-button:active {
+  transform: translateY(0);
+}
