@@ -1,11 +1,18 @@
 
-
-
 .header-container {
   font-size: 50px;
-  padding: 20px;
+  padding:10px;
   text-align: center;
   font-weight: bold;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.header-container img {
+  height: 110px;
+  width: auto;
+  object-fit: contain;
 }
 
 .form-container {
