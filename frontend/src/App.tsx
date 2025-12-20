@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import FiltersForm from './components/FiltersForm'
+import HeatMap from './components/HeatMap'
 import { ConfigProvider, message } from 'antd';
 import './App.css';
 
@@ -29,7 +30,9 @@ const App = () => {
           <FiltersForm onFinish={onFinish} />
         </div>
 
-        <div className="map-container">map</div>
+        <div className="map-container">
+        <HeatMap filters={filtersFormState} />
+        </div>
 
       </div>
 
