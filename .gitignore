@@ -5,7 +5,6 @@ __pycache__/
 *.pyc
 *.pyo
 
-# Conda / venv
 python_service/venv/
 python_service/.env
 
@@ -13,9 +12,38 @@ python_service/.env
 .ipynb_checkpoints/
 
 # =====================
-# Frontend
+# Frontend / API (Node)
 # =====================
 front/node_modules/
+server_api/node_modules/
+front/.env
+server_api/.env
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# =====================
+# Editors / IDEs
+# =====================
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
 # =====================
 # OS
