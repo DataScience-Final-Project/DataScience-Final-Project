@@ -26,6 +26,7 @@ numpy @ file:///D:/bld/numpy_1747544591878/work/dist/numpy-2.2.6-cp310-cp310-win
 packaging @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_packaging_1745345660/work
 pandas @ file:///D:/bld/pandas_1764614482805/work
 pillow @ file:///D:/bld/bld/rattler-build_pillow_1767353195/work
+psycopg2-binary==2.9.11
 pyogrio @ file:///D:/bld/pyogrio_1756824162044/work
 pyparsing @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_pyparsing_1766475444/work
 pyproj @ file:///D:/bld/pyproj_1742323250040/work
@@ -45,4 +46,5 @@ tzdata @ file:///home/conda/feedstock_root/build_artifacts/python-tzdata_1765719
 unicodedata2 @ file:///D:/bld/unicodedata2_1763054693050/work
 urllib3 @ file:///home/conda/feedstock_root/build_artifacts/urllib3_1765719678555/work
 win_inet_pton @ file:///D:/bld/win_inet_pton_1733130564612/work
+xgboost==3.1.2
 xyzservices @ file:///home/conda/feedstock_root/build_artifacts/xyzservices_1763813636763/work
