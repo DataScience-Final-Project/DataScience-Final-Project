@@ -48,3 +48,9 @@ urllib3 @ file:///home/conda/feedstock_root/build_artifacts/urllib3_176571967855
 win_inet_pton @ file:///D:/bld/win_inet_pton_1733130564612/work
 xgboost==3.1.2
 xyzservices @ file:///home/conda/feedstock_root/build_artifacts/xyzservices_1763813636763/work
+python-dotenv~=1.2.1
+pandas~=2.3.3
+requests~=2.32.5
+geopandas~=1.1.2
+pyrosm~=0.6.2
+shapely~=2.1.2
