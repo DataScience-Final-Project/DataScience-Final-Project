@@ -72,7 +72,7 @@ const HeatMap: React.FC<HeatMapProps> = ({ filters }) => {
 
           // Heatmap appearance
           "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 8, 1, 14, 3],
-          "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 8, 12, 14, 40],
+          "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 8, 20, 14, 50],
           "heatmap-opacity": 0.85,
 
           // green -> yellow -> red
