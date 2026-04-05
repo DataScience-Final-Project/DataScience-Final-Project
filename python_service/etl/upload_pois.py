@@ -1,5 +1,5 @@
 from etl.common.db import get_conn
-from common.paths import PROCESSED_DIR
+from etl.common.paths import PROCESSED_DIR
 import io
 import pandas as pd
 
@@ -40,7 +40,7 @@ def main():
                     geom_wkt TEXT,
                     name_en TEXT,
                     name_he TEXT,
-                    opening_year SMALLINT
+                    opening_year TEXT
                 ) ON COMMIT DROP;
             """)
 
@@ -63,7 +63,10 @@ def main():
                     ST_SetSRID(ST_GeomFromText(geom_wkt), 4326)::geometry(Point,4326),
                     NULLIF(BTRIM(name_en), ''),
                     NULLIF(BTRIM(name_he), ''),
-                    opening_year
+                    CASE
+                    WHEN NULLIF(BTRIM(opening_year), '') IS NULL THEN NULL
+                    ELSE CAST(CAST(opening_year AS NUMERIC) AS INT)
+                    END::SMALLINT
                 FROM stg_poi_current
                 ON CONFLICT (poi_uuid) DO UPDATE
                 SET

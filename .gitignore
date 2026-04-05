@@ -7,6 +7,9 @@ __pycache__/
 
 python_service/venv/
 python_service/.env
+python_service/.venv/
+.venv/
+venv/
 
 # Jupyter
 .ipynb_checkpoints/
