@@ -1,91 +1,303 @@
+/* ——— Dashboard shell ——— */
 
-.header-container {
-  font-size: 50px;
-  padding:10px;
-  text-align: center;
-  font-weight: bold;
+.app-shell {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 28px clamp(16px, 3.5vw, 40px) 40px;
+  max-width: 1560px;
+  margin: 0 auto;
+}
+
+.dashboard-header {
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
-.header-container img {
-  height: 110px;
+.dashboard-brand {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 8px 4px;
+}
+
+.dashboard-brand img {
+  height: 72px;
   width: auto;
+  max-width: 100%;
   object-fit: contain;
+  filter: drop-shadow(0 6px 18px rgba(15, 23, 42, 0.08));
 }
 
-.form-container {
-  background-color: white;  
-  flex:1;
-  padding: 20px;
-  border-radius: 20px;
-  margin: 20px;
+.dashboard-main {
+  flex: 1;
+  min-height: 0;
 }
 
-.map-container {
-  flex:2;
-  text-align: center;
-  font-size: 30px;
-  font-weight: bold;
-  border-radius: 20px;
-  background-color: white;
-  padding: 20px;
-  margin: 20px;
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(300px, 400px) minmax(0, 1fr);
+  gap: 28px;
+  align-items: stretch;
 }
 
-.app-container {
+@media (max-width: 992px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ——— Card shell ——— */
+
+/* Premium glass (reference): Filters + Market map */
+.dashboard-card--filters.ant-card,
+.dashboard-card--map.ant-card {
+  background: rgba(240, 245, 255, 0.11);
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 28px;
+  box-shadow:
+    0 32px 96px rgba(15, 23, 42, 0.2),
+    0 12px 40px rgba(15, 23, 42, 0.1),
+    0 2px 8px rgba(15, 23, 42, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+}
+
+.dashboard-card--filters .ant-card-head,
+.dashboard-card--map .ant-card-head {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+  min-height: 56px;
+  padding: 0 28px;
+  background: transparent;
+}
+
+.dashboard-card--filters .ant-card-head-title,
+.dashboard-card--map .ant-card-head-title {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #071a3d !important;
+  padding: 18px 0;
+}
+
+.dashboard-card .ant-card-body {
+  padding: 24px 28px 28px;
+}
+
+.dashboard-card--filters .ant-card-body {
+  padding-top: 8px;
+  color: rgba(7, 26, 61, 0.94);
+}
+
+.dashboard-card--map .ant-card-body {
+  color: rgba(7, 26, 61, 0.94);
+}
+
+.dashboard-card--map {
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  height: 100%;
-  width: 100%;
 }
 
-.content-container {
+.dashboard-card--map .ant-card-body {
+  flex: 1;
   display: flex;
-  flex-direction: row;
-  height: 100%;
+  flex-direction: column;
+  min-height: 0;
+  padding-bottom: 24px;
+}
+
+/* ——— Map region (nested glass frame; map content paints above) ——— */
+
+.dashboard-card--map .heatmap-shell {
+  flex: 1;
+  width: 100%;
+  height: clamp(380px, 62vh, 720px);
+  min-height: 360px;
+  border-radius: 22px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    0 20px 56px rgba(15, 23, 42, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.heatmap-shell > div {
+  height: 100% !important;
+}
+
+/* ——— Filters panel: typography ——— */
+
+.dashboard-card--filters .ant-form {
   width: 100%;
 }
 
-
-
-.form-container .ant-form {
-  width: 100%;
+.dashboard-card--filters .ant-form-item-label > label {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #071a3d !important;
 }
 
-.form-container .ant-slider {
-  width: 98%;
+.dashboard-card--filters .ant-form-item {
+  margin-bottom: 22px;
 }
 
-
-.form-container .ant-form-item-label {
-  font-size: 30px;
-  font-weight: bold;
-}
-
-.form-container .ant-form-item:last-child {
+.dashboard-card--filters .ant-form-item:last-child {
   text-align: center;
   margin-bottom: 0;
+  margin-top: 8px;
 }
 
-.submit-button {
-  transition: background-color 0.3s ease, transform 0.2s ease;
+.dashboard-card--filters .ant-divider {
+  margin: 8px 0 20px;
+  border-color: rgba(255, 255, 255, 0.22) !important;
 }
 
-.submit-button:hover {
-  background-color: #6a9ab8 !important;
-  transform: translateY(-2px);
+.dashboard-card--filters .ant-divider::before,
+.dashboard-card--filters .ant-divider::after {
+  border-color: rgba(255, 255, 255, 0.22) !important;
 }
 
-.submit-button:active {
-  transform: translateY(0);
+/* ——— Sliders ——— */
+
+.dashboard-card--filters .ant-slider {
+  width: 100%;
+  margin-top: 8px;
 }
 
+.dashboard-card--filters .ant-slider-rail {
+  background: rgba(255, 255, 255, 0.2) !important;
+}
 
+.dashboard-card--filters .ant-slider-track,
+.dashboard-card--filters .ant-slider-tracks .ant-slider-track {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.45),
+    rgba(255, 255, 255, 0.72)
+  ) !important;
+}
 
+.dashboard-card--filters .ant-slider-handle::after {
+  background-color: #ffffff !important;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.95),
+    0 6px 16px rgba(15, 23, 42, 0.22) !important;
+}
 
+.dashboard-card--filters .ant-slider:hover .ant-slider-track {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.55),
+    rgba(255, 255, 255, 0.88)
+  ) !important;
+}
 
-/* //////////////////////////////////////////////////////// */
-/* heatmap css: */
+/* ——— Segmented ——— */
 
+.dashboard-card--filters .ant-segmented {
+  padding: 4px;
+  border-radius: 16px !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+}
+
+.dashboard-card--filters .ant-segmented-item {
+  border-radius: 12px !important;
+  color: rgba(7, 26, 61, 0.82) !important;
+  font-weight: 500;
+}
+
+.dashboard-card--filters .ant-segmented-item:hover:not(.ant-segmented-item-selected) {
+  color: #071a3d !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.dashboard-card--filters .ant-segmented-item-selected {
+  background: rgba(255, 255, 255, 0.28) !important;
+  color: #05152e !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.18);
+}
+
+/* ——— Native area search (glass, matches filter column text) ——— */
+
+.dashboard-card--filters .area-search {
+  display: flex;
+  width: 100%;
+  margin-bottom: 16px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.dashboard-card--filters .area-search:hover {
+  border-color: rgba(255, 255, 255, 0.52);
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.dashboard-card--filters .area-search:focus-within {
+  border-color: rgba(255, 255, 255, 0.65);
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.dashboard-card--filters .area-search__input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 14px;
+  color: #071a3d;
+  outline: none;
+}
+
+.dashboard-card--filters .area-search__input::placeholder {
+  color: rgba(7, 26, 61, 0.45);
+}
+
+.dashboard-card--filters .area-search__btn {
+  flex-shrink: 0;
+  margin: 0;
+  border: none;
+  border-left: 1px solid rgba(255, 255, 255, 0.38);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 10px 18px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: #071a3d;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.dashboard-card--filters .area-search__btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.dashboard-card--filters .area-search__btn:active {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.dashboard-card--filters .area-search__btn:focus-visible {
+  outline: 2px solid rgba(7, 26, 61, 0.45);
+  outline-offset: -2px;
+}

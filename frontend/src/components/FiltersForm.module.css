@@ -1,0 +1,47 @@
+/* Form layout */
+.form {
+  width: 100%;
+}
+
+/* Submit: solid white pill, charcoal label */
+.submitButton:global(.ant-btn) {
+  min-width: 180px;
+  height: auto !important;
+  padding: 14px 36px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.04em;
+  border-radius: 999px !important;
+  border: 1px solid rgba(255, 255, 255, 0.45) !important;
+  color: #05152e !important;
+  background: #ffffff !important;
+  box-shadow:
+    0 10px 36px rgba(15, 23, 42, 0.14),
+    0 2px 8px rgba(15, 23, 42, 0.06) !important;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.25s ease,
+    filter 0.2s ease,
+    background 0.2s ease;
+}
+
+.submitButton:global(.ant-btn) :global(.anticon) {
+  color: #05152e !important;
+}
+
+.submitButton:global(.ant-btn):hover {
+  transform: translateY(-2px);
+  background: #f8fafc !important;
+  color: #05152e !important;
+  box-shadow:
+    0 16px 44px rgba(15, 23, 42, 0.16),
+    0 4px 12px rgba(15, 23, 42, 0.08) !important;
+}
+
+.submitButton:global(.ant-btn):active {
+  transform: translateY(0);
+  background: #f1f5f9 !important;
+}
+
+.submitButton:global(.ant-btn.ant-btn-text:not(:disabled):not(.ant-btn-disabled)) {
+  color: #05152e !important;
+}
