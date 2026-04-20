@@ -1,7 +1,9 @@
 // src/components/HeatMap.tsx
 import React, { useEffect, useRef } from "react";
-import maplibregl, { Map as MapLibreMap, GeoJSONSource } from "maplibre-gl";
+import { createRoot } from "react-dom/client";
+import maplibregl, { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import AreaInvestmentPopup, { getSuggestedAreasById } from "./AreaInvestmentPopup";
 
 /** Hebrew / Arabic labels on vector tiles need the RTL shaping plugin (lazy-loaded). */
 maplibregl.setRTLTextPlugin(
@@ -17,6 +19,8 @@ type AreaFeature = {
     coordinates: number[][][]; // מערך של טבעות קואורדינטות
   };
   properties: {
+    id?: number;
+    name?: string;
     growth: number;
     [key: string]: any;
   };
@@ -47,6 +51,7 @@ function boundsFromPolygonFeatures(features: AreaFeature[]): maplibregl.LngLatBo
 const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0 }) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
+  const popupRef = useRef<maplibregl.Popup | null>(null);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
@@ -97,11 +102,54 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0 }) => {
           "line-opacity": 0.5
         }
       });
+
+      map.on("mouseenter", "growth-fill", () => {
+        map.getCanvas().style.cursor = "pointer";
+      });
+
+      map.on("mouseleave", "growth-fill", () => {
+        map.getCanvas().style.cursor = "";
+      });
+
+      map.on("click", "growth-fill", (event) => {
+        const selectedFeature = event.features?.[0];
+        if (!selectedFeature) return;
+
+        const areaName =
+          typeof selectedFeature.properties?.name === "string"
+            ? selectedFeature.properties.name
+            : "Selected area";
+        const growthValue = Number(selectedFeature.properties?.growth ?? 0);
+        const areaId = Number(selectedFeature.properties?.id);
+        const popupContainer = document.createElement("div");
+        const popupRoot = createRoot(popupContainer);
+
+        popupRoot.render(
+          <AreaInvestmentPopup
+            areaName={areaName}
+            growthPercent={growthValue * 100}
+            suggestedAreas={getSuggestedAreasById(Number.isNaN(areaId) ? undefined : areaId)}
+          />
+        );
+
+        popupRef.current?.remove();
+        const popup = new maplibregl.Popup({ closeOnClick: true, maxWidth: "320px" })
+          .setLngLat(event.lngLat)
+          .setDOMContent(popupContainer)
+          .addTo(map);
+
+        popup.on("close", () => {
+          popupRoot.unmount();
+        });
+
+        popupRef.current = popup;
+      });
     });
 
     map.addControl(new maplibregl.NavigationControl(), "top-right");
 
     return () => {
+      popupRef.current?.remove();
       map.remove();
       mapRef.current = null;
     };

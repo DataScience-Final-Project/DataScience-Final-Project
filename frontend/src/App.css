@@ -4,8 +4,8 @@
   min-height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: 28px clamp(16px, 3.5vw, 40px) 40px;
+  gap: 16px;
+  padding: 16px clamp(14px, 2.8vw, 32px) 20px;
   max-width: 1560px;
   margin: 0 auto;
 }
@@ -24,7 +24,7 @@
 }
 
 .dashboard-brand img {
-  height: 72px;
+  height: 56px;
   width: auto;
   max-width: 100%;
   object-fit: contain;
@@ -39,7 +39,7 @@
 .dashboard-grid {
   display: grid;
   grid-template-columns: minmax(300px, 400px) minmax(0, 1fr);
-  gap: 28px;
+  gap: 18px;
   align-items: stretch;
 }
 
@@ -84,7 +84,7 @@
 }
 
 .dashboard-card .ant-card-body {
-  padding: 24px 28px 28px;
+  padding: 19px 40px 22px;
 }
 
 .dashboard-card--filters .ant-card-body {
@@ -107,7 +107,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  padding-bottom: 24px;
+  padding-bottom: 18px;
 }
 
 /* ——— Map region (nested glass frame; map content paints above) ——— */
@@ -115,8 +115,8 @@
 .dashboard-card--map .heatmap-shell {
   flex: 1;
   width: 100%;
-  height: clamp(380px, 62vh, 720px);
-  min-height: 360px;
+  height: clamp(360px, 62vh, 680px);
+  min-height: 320px;
   border-radius: 22px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.28);
@@ -147,7 +147,7 @@
 }
 
 .dashboard-card--filters .ant-form-item {
-  margin-bottom: 22px;
+  margin-bottom: 14px;
 }
 
 .dashboard-card--filters .ant-form-item:last-child {
@@ -157,7 +157,7 @@
 }
 
 .dashboard-card--filters .ant-divider {
-  margin: 8px 0 20px;
+  margin: 6px 0 14px;
   border-color: rgba(255, 255, 255, 0.22) !important;
 }
 
@@ -233,7 +233,7 @@
 .dashboard-card--filters .area-search {
   display: flex;
   width: 100%;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   border-radius: 14px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.12);

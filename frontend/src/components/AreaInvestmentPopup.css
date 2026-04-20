@@ -1,0 +1,31 @@
+.area-popup {
+  min-width: 220px;
+  max-width: 280px;
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+}
+
+.area-popup__title {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.area-popup__growth {
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+
+.area-popup__subtitle {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.area-popup__list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+}
+
+.area-popup__list li {
+  margin-bottom: 4px;
+}
