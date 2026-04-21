@@ -1,54 +1,72 @@
 // src/components/HeatMap.tsx
-import React, { useEffect, useMemo, useRef } from "react";
-import maplibregl, { Map as MapLibreMap, GeoJSONSource } from "maplibre-gl";
+import React, { useEffect, useRef } from "react";
+import { createRoot } from "react-dom/client";
+import maplibregl, { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import AreaInvestmentPopup, { getSuggestedAreasById } from "./AreaInvestmentPopup";
 
-type Filters = {
-  slider?: [number, number];   // price range
-  slider2?: [number, number];  // years forward range (as you currently have it)
+/** Hebrew / Arabic labels on vector tiles need the RTL shaping plugin (lazy-loaded). */
+maplibregl.setRTLTextPlugin(
+  "https://unpkg.com/@mapbox/mapbox-gl-rtl-text@0.3.0/dist/mapbox-gl-rtl-text.js",
+  true
+);
+
+// עדכון ה-Type: פוליגון דורש מערך תלת-ממדי של מספרים
+type AreaFeature = {
+  type: "Feature";
+  geometry: {
+    type: "Polygon";
+    coordinates: number[][][]; // מערך של טבעות קואורדינטות
+  };
+  properties: {
+    id?: number;
+    name?: string;
+    growth: number;
+    [key: string]: any;
+  };
 };
 
 type HeatMapProps = {
-  filters: Filters;
+  areas: AreaFeature[];
+  /** Increment after a search or reset so the map fits bounds to the current `areas`. */
+  fitBoundsNonce?: number;
 };
 
-const HeatMap: React.FC<HeatMapProps> = ({ filters }) => {
+function boundsFromPolygonFeatures(features: AreaFeature[]): maplibregl.LngLatBounds | null {
+  const bounds = new maplibregl.LngLatBounds();
+  let hasPoint = false;
+  for (const f of features) {
+    if (f.geometry.type !== "Polygon") continue;
+    for (const ring of f.geometry.coordinates) {
+      for (const pt of ring) {
+        const [lng, lat] = pt;
+        bounds.extend([lng, lat]);
+        hasPoint = true;
+      }
+    }
+  }
+  return hasPoint ? bounds : null;
+}
+
+const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0 }) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
+  const popupRef = useRef<maplibregl.Popup | null>(null);
 
-  // Build querystring from filters
-  const queryString = useMemo(() => {
-    const priceMin = filters.slider?.[0];
-    const priceMax = filters.slider?.[1];
-    const yearsMin = filters.slider2?.[0];
-    const yearsMax = filters.slider2?.[1];
-
-    const params = new URLSearchParams();
-    if (priceMin !== undefined) params.set("priceMin", String(priceMin));
-    if (priceMax !== undefined) params.set("priceMax", String(priceMax));
-    if (yearsMin !== undefined) params.set("yearsMin", String(yearsMin));
-    if (yearsMax !== undefined) params.set("yearsMax", String(yearsMax));
-
-    return params.toString();
-  }, [filters]);
-
-  // 1) Initialize map once
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
-      // Free style endpoint; you can replace later with your own tiles/style
       style: "https://tiles.openfreemap.org/styles/liberty",
-      center: [34.7818, 32.0853], // example: Tel Aviv
-      zoom: 10,
+      center: [34.7818, 32.0853],
+      zoom: 11,
     });
 
     mapRef.current = map;
 
     map.on("load", () => {
-      // Add empty source first (so the layer exists even before data arrives)
-      map.addSource("growth", {
+      map.addSource("growth-source", {
         type: "geojson",
         data: {
           type: "FeatureCollection",
@@ -56,105 +74,125 @@ const HeatMap: React.FC<HeatMapProps> = ({ filters }) => {
         },
       });
 
+      // 1. שכבת המילוי (הצבע ה"חם")
       map.addLayer({
-        id: "growth-heat",
-        type: "heatmap",
-        source: "growth",
+        id: "growth-fill",
+        type: "fill", // שינוי מ-heatmap ל-fill
+        source: "growth-source",
         paint: {
-          // Weight is driven by feature property "growth" expected in [0..1]
-          "heatmap-weight": [
+          "fill-color": [
             "interpolate",
             ["linear"],
-            ["coalesce", ["get", "growth"], 0],
-            0, 0,
-            1, 1,
-          ],
-
-          // Heatmap appearance
-          "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 8, 1, 14, 3],
-          "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 8, 20, 14, 50],
-          "heatmap-opacity": 0.85,
-
-          // green -> yellow -> red
-          "heatmap-color": [
-            "interpolate",
-            ["linear"],
-            ["heatmap-density"],
-            0.0, "rgba(0,0,0,0)",
-            0.3, "rgb(0,200,0)",
-            0.6, "rgb(255,215,0)",
-            1.0, "rgb(220,0,0)",
+            ["get", "growth"], // לוקח את הערך ישירות מהפוליגון
+            0.0, "rgba(0, 200, 0, 0.4)",   // צמיחה 0 = ירוק שקוף
+            0.5, "rgba(255, 215, 0, 0.6)", // צמיחה 0.5 = צהוב
+            1.0, "rgba(220, 0, 0, 0.8)"    // צמיחה 1 = אדום חם
           ],
         },
       });
+
+      // 2. שכבת קווי מתאר (כדי שהאזורים יהיו מובחנים)
+      map.addLayer({
+        id: "growth-outline",
+        type: "line",
+        source: "growth-source",
+        paint: {
+          "line-color": "#ffffff",
+          "line-width": 1.5,
+          "line-opacity": 0.5
+        }
+      });
+
+      map.on("mouseenter", "growth-fill", () => {
+        map.getCanvas().style.cursor = "pointer";
+      });
+
+      map.on("mouseleave", "growth-fill", () => {
+        map.getCanvas().style.cursor = "";
+      });
+
+      map.on("click", "growth-fill", (event) => {
+        const selectedFeature = event.features?.[0];
+        if (!selectedFeature) return;
+
+        const areaName =
+          typeof selectedFeature.properties?.name === "string"
+            ? selectedFeature.properties.name
+            : "Selected area";
+        const growthValue = Number(selectedFeature.properties?.growth ?? 0);
+        const areaId = Number(selectedFeature.properties?.id);
+        const popupContainer = document.createElement("div");
+        const popupRoot = createRoot(popupContainer);
+
+        popupRoot.render(
+          <AreaInvestmentPopup
+            areaName={areaName}
+            growthPercent={growthValue * 100}
+            suggestedAreas={getSuggestedAreasById(Number.isNaN(areaId) ? undefined : areaId)}
+          />
+        );
+
+        popupRef.current?.remove();
+        const popup = new maplibregl.Popup({ closeOnClick: true, maxWidth: "320px" })
+          .setLngLat(event.lngLat)
+          .setDOMContent(popupContainer)
+          .addTo(map);
+
+        popup.on("close", () => {
+          popupRoot.unmount();
+        });
+
+        popupRef.current = popup;
+      });
     });
 
-    // Optional: navigation controls
     map.addControl(new maplibregl.NavigationControl(), "top-right");
 
     return () => {
+      popupRef.current?.remove();
       map.remove();
       mapRef.current = null;
     };
   }, []);
 
-  // 2) Load and update heatmap when filters change
+  // עדכון הנתונים כשה-areas משתנים
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
-    function load() {
-      try {
-        // Mock GeoJSON data - replace with actual API call later
-        // Note: Currently ignores filters, will use queryString when real endpoint is added
-        const geojson = {
-          type: "FeatureCollection" as const,
-          features: [
-            // High growth areas (red/yellow)
-            { type: "Feature", geometry: { type: "Point", coordinates: [34.7818, 32.0853] }, properties: { growth: 0.9 } },
-            { type: "Feature", geometry: { type: "Point", coordinates: [34.7900, 32.0900] }, properties: { growth: 0.85 } },
-            { type: "Feature", geometry: { type: "Point", coordinates: [34.7750, 32.0800] }, properties: { growth: 0.8 } },
-            { type: "Feature", geometry: { type: "Point", coordinates: [34.7850, 32.0950] }, properties: { growth: 0.75 } },
-            { type: "Feature", geometry: { type: "Point", coordinates: [34.7700, 32.0900] }, properties: { growth: 0.7 } },
-            // Medium growth areas (yellow/green)
-            { type: "Feature", geometry: { type: "Point", coordinates: [34.8000, 32.1000] }, properties: { growth: 0.6 } },
-            { type: "Feature", geometry: { type: "Point", coordinates: [34.7600, 32.0750] }, properties: { growth: 0.55 } },
-            { type: "Feature", geometry: { type: "Point", coordinates: [34.7950, 32.0850] }, properties: { growth: 0.5 } },
-            { type: "Feature", geometry: { type: "Point", coordinates: [34.7650, 32.1000] }, properties: { growth: 0.45 } },
-            { type: "Feature", geometry: { type: "Point", coordinates: [34.8100, 32.0900] }, properties: { growth: 0.4 } },
-            // Lower growth areas (green)
-            { type: "Feature", geometry: { type: "Point", coordinates: [34.7500, 32.0700] }, properties: { growth: 0.35 } },
-            { type: "Feature", geometry: { type: "Point", coordinates: [34.8200, 32.1100] }, properties: { growth: 0.3 } },
-            { type: "Feature", geometry: { type: "Point", coordinates: [34.7400, 32.1050] }, properties: { growth: 0.25 } },
-            { type: "Feature", geometry: { type: "Point", coordinates: [34.8300, 32.0800] }, properties: { growth: 0.2 } },
-            { type: "Feature", geometry: { type: "Point", coordinates: [34.7300, 32.0950] }, properties: { growth: 0.15 } },
-            // Additional scattered points
-            { type: "Feature", geometry: { type: "Point", coordinates: [34.7800, 32.0700] }, properties: { growth: 0.65 } },
-            { type: "Feature", geometry: { type: "Point", coordinates: [34.7900, 32.0750] }, properties: { growth: 0.6 } },
-            { type: "Feature", geometry: { type: "Point", coordinates: [34.7700, 32.1050] }, properties: { growth: 0.55 } },
-            { type: "Feature", geometry: { type: "Point", coordinates: [34.8000, 32.0950] }, properties: { growth: 0.5 } },
-            { type: "Feature", geometry: { type: "Point", coordinates: [34.7600, 32.0850] }, properties: { growth: 0.45 } },
-            { type: "Feature", geometry: { type: "Point", coordinates: [34.7750, 32.1000] }, properties: { growth: 0.4 } },
-            { type: "Feature", geometry: { type: "Point", coordinates: [34.7850, 32.0700] }, properties: { growth: 0.35 } },
-            { type: "Feature", geometry: { type: "Point", coordinates: [34.7950, 32.1100] }, properties: { growth: 0.3 } },
-          ],
-        };
+    function update() {
+      const geojson = {
+        type: "FeatureCollection",
+        features: areas,
+      };
 
-        if (!map) return;
-        const src = map.getSource("growth") as GeoJSONSource | undefined;
-        if (src) src.setData(geojson as any);
-      } catch (err) {
-        console.error("Error loading heatmap data:", err);
-      }
+      const src = map?.getSource("growth-source") as GeoJSONSource | undefined;
+      if (src) src.setData(geojson as any);
     }
 
-    // Only load after style & layers exist
     if (map.isStyleLoaded()) {
-      load();
+      update();
     } else {
-      map.once("load", load);
+      map.once("load", update);
     }
-  }, [queryString]);
+  }, [areas]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || fitBoundsNonce === 0 || !areas.length) return;
+
+    function fit() {
+      const b = boundsFromPolygonFeatures(areas);
+      if (!b || !map) return;
+      map.fitBounds(b, { padding: 48, maxZoom: 14, duration: 600 });
+    }
+
+    if (map.isStyleLoaded()) {
+      fit();
+    } else {
+      map.once("load", fit);
+    }
+  }, [areas, fitBoundsNonce]);
 
   return <div ref={mapContainerRef} style={{ width: "100%", height: "100%" }} />;
 };
