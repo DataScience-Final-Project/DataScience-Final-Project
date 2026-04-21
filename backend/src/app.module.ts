@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { SequelizeModule } from '@nestjs/sequelize';
 import { CityModule } from './entities/city/city.module';
+import { GrowthClusterModule } from './entities/growthCluster/growthCluster.module';
 
 @Module({
   imports: [
@@ -19,7 +20,8 @@ import { CityModule } from './entities/city/city.module';
         synchronize: false,
       }),
     }),
-    CityModule
+    CityModule,
+    GrowthClusterModule
   ],
 })
 
