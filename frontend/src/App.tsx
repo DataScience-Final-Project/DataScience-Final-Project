@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import FiltersForm from './components/FiltersForm'
 import HeatMap from './components/HeatMap'
 import { Card, ConfigProvider, message } from 'antd';
@@ -12,6 +12,15 @@ const App = () => {
   const [, setFiltersFormState] = useState<any>({})
   const [mapAreas, setMapAreas] = useState(() => mockAreas)
   const [mapFitNonce, setMapFitNonce] = useState(0)
+
+  useEffect(() => {
+    const fetchMapArea = async() => {
+        const res = await fetch('http://localhost:4000/growth-clusters?years=1');
+        const resAsJson = await res.json();
+        console.log(resAsJson)
+    }
+    fetchMapArea()
+  }, [])
 
   const onAreaSearch = useCallback((query: string) => {
     const q = query.trim().toLowerCase()
