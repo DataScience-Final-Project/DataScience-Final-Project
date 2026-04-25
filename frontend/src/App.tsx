@@ -6,32 +6,44 @@ import propCastLogo from './assets/propCastLogo.png';
 import './App.css';
 import { mockAreas } from './data'
 import { dashboardTheme } from './dashboardTheme'
+import { normalizeServerData } from './dataTransformers'
 
 
 const App = () => {
-  const [, setFiltersFormState] = useState<any>({})
+const [filtersFormState, setFiltersFormState] = useState<any>({ yearsForward: 1 })
   const [mapAreas, setMapAreas] = useState(() => mockAreas)
   const [mapFitNonce, setMapFitNonce] = useState(0)
+  const [normalizedData, setNormalizedData] = useState<any>(null)
 
   useEffect(() => {
-    const fetchMapArea = async() => {
-        const res = await fetch('http://localhost:4000/growth-clusters?years=1');
-        const resAsJson = await res.json();
-        console.log(resAsJson)
-    }
-    fetchMapArea()
-  }, [])
+  const fetchMapArea = async() => {
+      // 1. שולפים את השנים מתוך הסטייט של הטופס (אם אין, ברירת המחדל תהיה 1)
+      const years = filtersFormState.yearsForward || 1;
+      
+      // 2. משנים את הכתובת לסטרינג דינמי (Backticks - המירכאות העקומות)
+      const res = await fetch(`http://localhost:4000/growth-clusters?years=${years}`);
+      const resAsJson = await res.json();
+      
+      const normalizedData = normalizeServerData(resAsJson);
+      setNormalizedData(normalizedData);
+      setMapAreas(normalizedData);
+  }
+  
+  fetchMapArea();
+  
+// 3. הוספנו את הסטייט של הטופס למערך התלויות!
+}, [filtersFormState]);
 
   const onAreaSearch = useCallback((query: string) => {
     const q = query.trim().toLowerCase()
     if (!q) {
-      setMapAreas(mockAreas)
+      setMapAreas(normalizedData)
       setMapFitNonce((n) => n + 1)
       message.info('Showing all areas')
       return
     }
 
-    const matches = mockAreas.filter((f: any) =>
+    const matches = normalizedData.filter((f: any) =>
       String(f.properties?.name ?? '').toLowerCase().includes(q)
     )
 
@@ -42,7 +54,7 @@ const App = () => {
 
     setMapAreas(matches)
     setMapFitNonce((n) => n + 1)
-  }, [])
+  }, [normalizedData])
 
 
   const onFinish = (values: any) => {

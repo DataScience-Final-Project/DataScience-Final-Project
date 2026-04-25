@@ -22,6 +22,7 @@ type AreaFeature = {
     id?: number;
     name?: string;
     growth: number;
+    originalGrade?: number; // הוספנו את הציון המקורי ל-Type
     [key: string]: any;
   };
 };
@@ -60,7 +61,7 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0 }) => {
       container: mapContainerRef.current,
       style: "https://tiles.openfreemap.org/styles/liberty",
       center: [34.7818, 32.0853],
-      zoom: 11,
+      zoom: 8,
     });
 
     mapRef.current = map;
@@ -83,10 +84,10 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0 }) => {
           "fill-color": [
             "interpolate",
             ["linear"],
-            ["get", "growth"], // לוקח את הערך ישירות מהפוליגון
-            0.0, "rgba(0, 200, 0, 0.4)",   // צמיחה 0 = ירוק שקוף
-            0.5, "rgba(255, 215, 0, 0.6)", // צמיחה 0.5 = צהוב
-            1.0, "rgba(220, 0, 0, 0.8)"    // צמיחה 1 = אדום חם
+            ["get", "growth"],
+            0.4, "rgba(0, 200, 0, 0.4)",   // ציונים סביב 4 יהיו ירוקים
+            0.7, "rgba(255, 215, 0, 0.6)", // ציונים סביב 7 יהיו צהובים
+            0.9, "rgba(220, 0, 0, 0.8)"    // ציונים 9 ומעלה יהיו אדומים
           ],
         },
       });
@@ -115,20 +116,26 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0 }) => {
         const selectedFeature = event.features?.[0];
         if (!selectedFeature) return;
 
-        const areaName =
-          typeof selectedFeature.properties?.name === "string"
-            ? selectedFeature.properties.name
-            : "Selected area";
-        const growthValue = Number(selectedFeature.properties?.growth ?? 0);
-        const areaId = Number(selectedFeature.properties?.id);
+        // --- כאן עודכן הקוד ---
+        const properties = selectedFeature.properties as AreaFeature["properties"];
+        
+        const areaName = properties.name || "Selected area";
+        const areaId = properties.id;
+        
+        // אנחנו משתמשים בציון המקורי אם הוא קיים, אחרת מנסים להכפיל את ה-growth ב-10
+        const gradeValue = properties.originalGrade !== undefined 
+            ? properties.originalGrade 
+            : Number(properties.growth ?? 0) * 10; 
+        // ----------------------
+
         const popupContainer = document.createElement("div");
         const popupRoot = createRoot(popupContainer);
 
         popupRoot.render(
           <AreaInvestmentPopup
             areaName={areaName}
-            growthPercent={growthValue * 100}
-            suggestedAreas={getSuggestedAreasById(Number.isNaN(areaId) ? undefined : areaId)}
+            growthPercent={gradeValue} // העברנו את הציון המדויק
+            suggestedAreas={getSuggestedAreasById(areaId)}
           />
         );
 
