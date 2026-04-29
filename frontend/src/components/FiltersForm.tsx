@@ -95,7 +95,7 @@ const FiltersForm: React.FC<FiltersFormProps> = ({ onFinish }) => {
           min={0}
           max={10000000}
           step={100000}
-          defaultValue={[0, 1000000]}
+          defaultValue={[0, 10000000]}
           marks={priceRangeMarks}
           tooltip={{ formatter: formatPriceSliderValue }}
         />
