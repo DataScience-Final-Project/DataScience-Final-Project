@@ -8,65 +8,55 @@ import { dashboardTheme } from './dashboardTheme';
 import { normalizeServerData } from './dataTransformers';
 
 const App = () => {
-  // הגדרת ערך התחלתי לטופס (שנה 1 קדימה)
   const [filtersFormState, setFiltersFormState] = useState<any>({ yearsForward: '1' });
-  const [mapAreas, setMapAreas] = useState<any[]>([]); // מתחיל כמערך ריק כי אנחנו מביאים מהשרת
+  const [mapAreas, setMapAreas] = useState<any[]>([]);
   const [mapFitNonce, setMapFitNonce] = useState(0);
 
   useEffect(() => {
     const fetchMapArea = async () => {
-      // 1. שולפים את הנתונים מהטופס (מנקים את פלוס מ-'6+' כדי שהשרת יקבל רק מספר)
+      
+      // 1. חילוץ הנתונים מהטופס
       const years = filtersFormState.yearsForward?.replace('+', '') || '1';
       
-      // 2. בונים את ה-URL הבסיסי
+      // 2. בניית הלינק לשרת
       let url = `http://localhost:4000/growth-clusters?years=${years}`;
 
-      // מוסיפים עיר אם המשתמש בחר בטופס
       if (filtersFormState.city) {
-        // encodeURIComponent חשוב כדי שדפדפנים ידעו לקרוא אותיות בעברית ורווחים בתוך הלינק
         url += `&city=${encodeURIComponent(filtersFormState.city)}`;
       }
-
-      // מוסיפים את טווח המחירים מהסליידר (מינימום ומקסימום)
       if (filtersFormState.slider && filtersFormState.slider.length === 2) {
         url += `&minPrice=${filtersFormState.slider[0]}&maxPrice=${filtersFormState.slider[1]}`;
       }
 
-      console.log('Sending request to URL:', url); // כדי שתוכלי לראות בלוג איזה לינק נשלח
+      console.log('Sending real request to URL:', url);
 
       try {
-        // הוספת ההדר פה מונעת מ-ngrok להחזיר דף אזהרה במקום את הנתונים
-        const res = await fetch(url, {
-          headers: {
-            'ngrok-skip-browser-warning': 'true'
-          }
-        });
-        
+        // 3. שליחת הבקשה לשרת האמיתי
+        const res = await fetch(url);
         const resAsJson = await res.json();
-
-        // 3. מה קורה אם השרת מחזיר מערך ריק (אין נתונים לחיפוש הזה)?
+        console.log("DATA FROM SERVER:", resAsJson);
+        // 4. טיפול במצב שבו אין תוצאות
         if (!resAsJson || resAsJson.length === 0) {
           message.warning('לא נמצאו אזורי השקעה שמתאימים לסינון. נסה לשנות אזור או תקציב.');
-          setMapAreas([]); // מנקים את המפה
-          setMapFitNonce((n) => n + 1); // מרפרשים את המפה
+          setMapAreas([]);
+          setMapFitNonce((n) => n + 1);
           return;
         }
 
-        // 4. אם יש נתונים, מנרמלים ומציגים אותם
+        // 5. נירמול הנתונים והצגתם על המפה
         const normalizedData = normalizeServerData(resAsJson);
         setMapAreas(normalizedData);
-        setMapFitNonce((n) => n + 1); // עושה זום אוטומטי לאזורים החדשים
+        setMapFitNonce((n) => n + 1);
 
       } catch (error) {
         console.error('Fetch error:', error);
-        message.error('שגיאה בתקשורת מול השרת. ודא שהשרת רץ.');
+        message.error('שגיאה בתקשורת מול השרת. ודאי שהשרת רץ.');
       }
     };
 
     fetchMapArea();
-  }, [filtersFormState]); // ה-useEffect הזה ירוץ מחדש בכל פעם ש-filtersFormState משתנה
+  }, [filtersFormState]);
 
-  // פונקציה שמופעלת כשהמשתמש לוחץ "Submit" בטופס
   const onFinish = (values: any) => {
     setFiltersFormState(values);
     console.log('Form submitted with values:', values);
@@ -99,4 +89,4 @@ const App = () => {
   )
 }
 
-export default App
+export default App;

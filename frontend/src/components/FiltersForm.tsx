@@ -9,13 +9,13 @@ type FiltersFormProps = {
 
 const formatPriceSliderValue = (value?: number): string => {
   if (value === undefined) return '';
-  if (value >= 1_000_000) return '$1,000,000+';
-  return `$${value.toLocaleString('en-US')}`;
+  if (value >= 10_000_000) return '₪10,000,000+';
+  return `₪${value.toLocaleString('en-US')}`;
 };
 
 const priceRangeMarks = {
-  0: '$0',
-  1_000_000: '$1M+',
+  0: '₪0',
+  10_000_000: '₪1M+',
 };
 
 const FiltersForm: React.FC<FiltersFormProps> = ({ onFinish }) => {
@@ -93,7 +93,7 @@ const FiltersForm: React.FC<FiltersFormProps> = ({ onFinish }) => {
         <Slider
           range={{ draggableTrack: true }}
           min={0}
-          max={1000000}
+          max={10000000}
           step={100000}
           defaultValue={[0, 1000000]}
           marks={priceRangeMarks}

@@ -3,7 +3,8 @@ import React, { useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import maplibregl, { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import AreaInvestmentPopup, { getSuggestedAreasById } from "./AreaInvestmentPopup";
+// הסרנו את הייבוא של נתוני הדמה, משאירים רק את הקומפוננטה
+import AreaInvestmentPopup from "./AreaInvestmentPopup";
 
 /** Hebrew / Arabic labels on vector tiles need the RTL shaping plugin (lazy-loaded). */
 maplibregl.setRTLTextPlugin(
@@ -23,6 +24,7 @@ type AreaFeature = {
     name?: string;
     growth: number;
     originalGrade?: number; // הוספנו את הציון המקורי ל-Type
+    suggestedAreas?: any; // הוספנו את מערך הערים
     [key: string]: any;
   };
 };
@@ -117,17 +119,28 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0 }) => {
         const selectedFeature = event.features?.[0];
         if (!selectedFeature) return;
 
-        // --- כאן עודכן הקוד ---
-        const properties = selectedFeature.properties as AreaFeature["properties"];
+        const properties = selectedFeature.properties as any;
         
         const areaName = properties.name || "Selected area";
-        const areaId = properties.id;
         
-        // אנחנו משתמשים בציון המקורי אם הוא קיים, אחרת מנסים להכפיל את ה-growth ב-10
+        // אנחנו משתמשים בציון המקורי אם הוא קיים, אחרת מכפילים ב-100 (לפי הסקאלה החדשה)
         const gradeValue = properties.originalGrade !== undefined 
             ? properties.originalGrade 
             : Number(properties.growth ?? 0) * 10; 
-        // ----------------------
+
+        // --- הפיכת הערים ממחרוזת של MapLibre למערך אמיתי ---
+        let parsedCities: string[] = [];
+        try {
+          if (typeof properties.suggestedAreas === "string") {
+            parsedCities = JSON.parse(properties.suggestedAreas);
+          } else if (Array.isArray(properties.suggestedAreas)) {
+            parsedCities = properties.suggestedAreas;
+          }
+        } catch (e) {
+          console.error("Failed to parse suggestedAreas", e);
+          parsedCities = [];
+        }
+        // ----------------------------------------------------
 
         const popupContainer = document.createElement("div");
         const popupRoot = createRoot(popupContainer);
@@ -135,8 +148,8 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0 }) => {
         popupRoot.render(
           <AreaInvestmentPopup
             areaName={areaName}
-            growthPercent={gradeValue} // העברנו את הציון המדויק
-            suggestedAreas={getSuggestedAreasById(areaId)}
+            growthPercent={gradeValue}
+            suggestedAreas={parsedCities} // מעבירים את המערך האמיתי מהשרת!
           />
         );
 
