@@ -59,7 +59,7 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0 }) => {
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: "https://tiles.openfreemap.org/styles/liberty",
+      style: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
       center: [34.7818, 32.0853],
       zoom: 8,
     });
@@ -85,10 +85,11 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0 }) => {
             "interpolate",
             ["linear"],
             ["get", "growth"],
-            0.4, "rgba(0, 200, 0, 0.4)",   // ציונים סביב 4 יהיו ירוקים
-            0.7, "rgba(255, 215, 0, 0.6)", // ציונים סביב 7 יהיו צהובים
-            0.9, "rgba(220, 0, 0, 0.8)"    // ציונים 9 ומעלה יהיו אדומים
+            0.4, "rgba(125, 95, 255, 0.45)",
+            0.7, "rgba(255, 93, 143, 0.6)",
+            0.9, "rgba(255, 155, 84, 0.72)"
           ],
+          "fill-opacity": 0.88,
         },
       });
 
@@ -98,9 +99,9 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0 }) => {
         type: "line",
         source: "growth-source",
         paint: {
-          "line-color": "#ffffff",
-          "line-width": 1.5,
-          "line-opacity": 0.5
+          "line-color": "#c4b5fd",
+          "line-width": 1.3,
+          "line-opacity": 0.75
         }
       });
 
@@ -201,7 +202,7 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0 }) => {
     }
   }, [areas, fitBoundsNonce]);
 
-  return <div ref={mapContainerRef} style={{ width: "100%", height: "100%" }} />;
+  return <div ref={mapContainerRef} className="heatmap-canvas" style={{ width: "100%", height: "100%" }} />;
 };
 
 export default HeatMap;

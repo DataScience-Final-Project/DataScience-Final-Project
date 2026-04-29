@@ -72,6 +72,8 @@ const FiltersForm: React.FC<FiltersFormProps> = ({ onFinish }) => {
       {/* שורת חיפוש העיר */}
       <Form.Item name="city" label="City / Area">
         <Select
+          className="city-area-select"
+          popupClassName="city-area-select-dropdown"
           showSearch
           allowClear
           loading={loadingCities}

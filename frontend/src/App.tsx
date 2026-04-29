@@ -19,7 +19,7 @@ const App = () => {
       const years = filtersFormState.yearsForward?.replace('+', '') || '1';
       
       // 2. בונים את ה-URL הבסיסי
-      let url = `http://localhost:4000/growth-clusters?years=${years}`;
+      let url = `http://possible-condiment-debate.ngrok-free.dev/growth-clusters?years=${years}`;
 
       // מוסיפים עיר אם המשתמש בחר בטופס
       if (filtersFormState.city) {
@@ -35,7 +35,13 @@ const App = () => {
       console.log('Sending request to URL:', url); // כדי שתוכלי לראות בלוג איזה לינק נשלח
 
       try {
-        const res = await fetch(url);
+        // הוספת ההדר פה מונעת מ-ngrok להחזיר דף אזהרה במקום את הנתונים
+        const res = await fetch(url, {
+          headers: {
+            'ngrok-skip-browser-warning': 'true'
+          }
+        });
+        
         const resAsJson = await res.json();
 
         // 3. מה קורה אם השרת מחזיר מערך ריק (אין נתונים לחיפוש הזה)?
@@ -53,7 +59,7 @@ const App = () => {
 
       } catch (error) {
         console.error('Fetch error:', error);
-        message.error('שגיאה בתקשורת מול השרת. ודאי שהשרת רץ.');
+        message.error('שגיאה בתקשורת מול השרת. ודא שהשרת רץ.');
       }
     };
 
