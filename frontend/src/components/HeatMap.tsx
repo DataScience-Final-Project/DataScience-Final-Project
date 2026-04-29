@@ -85,9 +85,9 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0 }) => {
             "interpolate",
             ["linear"],
             ["get", "growth"],
-            0.4, "rgba(125, 95, 255, 0.45)",
-            0.7, "rgba(255, 93, 143, 0.6)",
-            0.9, "rgba(255, 155, 84, 0.72)"
+            0.4, "#e9e3ff",
+            0.7, "#9c82fc",
+            0.9, "#8360ffee"
           ],
           "fill-opacity": 0.88,
         },
@@ -99,8 +99,8 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0 }) => {
         type: "line",
         source: "growth-source",
         paint: {
-          "line-color": "#c4b5fd",
-          "line-width": 1.3,
+          "line-color": "#ffffff",
+          "line-width": 1,
           "line-opacity": 0.75
         }
       });

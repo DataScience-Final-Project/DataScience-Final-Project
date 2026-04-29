@@ -19,7 +19,7 @@ const App = () => {
       const years = filtersFormState.yearsForward?.replace('+', '') || '1';
       
       // 2. בונים את ה-URL הבסיסי
-      let url = `http://possible-condiment-debate.ngrok-free.dev/growth-clusters?years=${years}`;
+      let url = `http://localhost:4000/growth-clusters?years=${years}`;
 
       // מוסיפים עיר אם המשתמש בחר בטופס
       if (filtersFormState.city) {
