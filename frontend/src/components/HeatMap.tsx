@@ -85,9 +85,9 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0 }) => {
             "interpolate",
             ["linear"],
             ["get", "growth"],
-            0.4, "#e9e3ff",
-            0.7, "#9c82fc",
-            0.9, "#8360ffee"
+            0.4, "#7dd3a6",
+            0.7, "#f6cf6a",
+            0.9, "#f17474"
           ],
           "fill-opacity": 0.88,
         },
