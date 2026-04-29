@@ -6,7 +6,7 @@ export class GrowthClusterController {
     constructor(private readonly service: GrowthClusterService) { }
 
     @Get('')
-    fetchAll(@Query('years') years: number) {
-        return this.service.fetchAll(years);
+    fetchAll(@Query('years') years: number, @Query('city') city?: string) {
+        return this.service.fetchAll(years, city);
     }
 }
