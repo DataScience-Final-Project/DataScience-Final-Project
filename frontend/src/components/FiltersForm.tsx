@@ -70,7 +70,7 @@ const FiltersForm: React.FC<FiltersFormProps> = ({ onFinish }) => {
       initialValues={{ yearsForward: '1' }}
     >
       {/* שורת חיפוש העיר */}
-      <Form.Item name="city" label="City / Area">
+      <Form.Item name="city" label="City">
         <Select
           className="city-area-select"
           popupClassName="city-area-select-dropdown"
@@ -115,7 +115,7 @@ const FiltersForm: React.FC<FiltersFormProps> = ({ onFinish }) => {
       <Form.Item>
         {/* שיניתי טיפה את העיצוב לכפתור בולט יותר כדי שיהיה ברור שזה כפתור חיפוש/שמירה */}
         <Button type="primary" htmlType="submit" className={styles.submitButton} style={{ width: '100%' }}>
-          Search / Submit
+          Submit
         </Button>
       </Form.Item>
       
