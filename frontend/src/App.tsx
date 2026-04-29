@@ -1,48 +1,76 @@
-import { useCallback, useState } from 'react'
-import FiltersForm from './components/FiltersForm'
-import HeatMap from './components/HeatMap'
+import { useEffect, useState } from 'react';
+import FiltersForm from './components/FiltersForm';
+import HeatMap from './components/HeatMap';
 import { Card, ConfigProvider, message } from 'antd';
 import propCastLogo from './assets/propCastLogo.png';
 import './App.css';
-import { mockAreas } from './data'
-import { dashboardTheme } from './dashboardTheme'
-
+import { dashboardTheme } from './dashboardTheme';
+import { normalizeServerData } from './dataTransformers';
 
 const App = () => {
-  const [, setFiltersFormState] = useState<any>({})
-  const [mapAreas, setMapAreas] = useState(() => mockAreas)
-  const [mapFitNonce, setMapFitNonce] = useState(0)
+  // הגדרת ערך התחלתי לטופס (שנה 1 קדימה)
+  const [filtersFormState, setFiltersFormState] = useState<any>({ yearsForward: '1' });
+  const [mapAreas, setMapAreas] = useState<any[]>([]); // מתחיל כמערך ריק כי אנחנו מביאים מהשרת
+  const [mapFitNonce, setMapFitNonce] = useState(0);
 
-  const onAreaSearch = useCallback((query: string) => {
-    const q = query.trim().toLowerCase()
-    if (!q) {
-      setMapAreas(mockAreas)
-      setMapFitNonce((n) => n + 1)
-      message.info('Showing all areas')
-      return
-    }
+  useEffect(() => {
+    const fetchMapArea = async () => {
+      // 1. שולפים את הנתונים מהטופס (מנקים את פלוס מ-'6+' כדי שהשרת יקבל רק מספר)
+      const years = filtersFormState.yearsForward?.replace('+', '') || '1';
+      
+      // 2. בונים את ה-URL הבסיסי
+      let url = `http://localhost:4000/growth-clusters?years=${years}`;
 
-    const matches = mockAreas.filter((f: any) =>
-      String(f.properties?.name ?? '').toLowerCase().includes(q)
-    )
+      // מוסיפים עיר אם המשתמש בחר בטופס
+      if (filtersFormState.city) {
+        // encodeURIComponent חשוב כדי שדפדפנים ידעו לקרוא אותיות בעברית ורווחים בתוך הלינק
+        url += `&city=${encodeURIComponent(filtersFormState.city)}`;
+      }
 
-    if (!matches.length) {
-      message.warning('No matching area or city')
-      return
-    }
+      // מוסיפים את טווח המחירים מהסליידר (מינימום ומקסימום)
+      if (filtersFormState.slider && filtersFormState.slider.length === 2) {
+        url += `&minPrice=${filtersFormState.slider[0]}&maxPrice=${filtersFormState.slider[1]}`;
+      }
 
-    setMapAreas(matches)
-    setMapFitNonce((n) => n + 1)
-  }, [])
+      console.log('Sending request to URL:', url); // כדי שתוכלי לראות בלוג איזה לינק נשלח
 
+      try {
+        // הוספת ההדר פה מונעת מ-ngrok להחזיר דף אזהרה במקום את הנתונים
+        const res = await fetch(url, {
+          headers: {
+            'ngrok-skip-browser-warning': 'true'
+          }
+        });
+        
+        const resAsJson = await res.json();
 
+        // 3. מה קורה אם השרת מחזיר מערך ריק (אין נתונים לחיפוש הזה)?
+        if (!resAsJson || resAsJson.length === 0) {
+          message.warning('לא נמצאו אזורי השקעה שמתאימים לסינון. נסה לשנות אזור או תקציב.');
+          setMapAreas([]); // מנקים את המפה
+          setMapFitNonce((n) => n + 1); // מרפרשים את המפה
+          return;
+        }
+
+        // 4. אם יש נתונים, מנרמלים ומציגים אותם
+        const normalizedData = normalizeServerData(resAsJson);
+        setMapAreas(normalizedData);
+        setMapFitNonce((n) => n + 1); // עושה זום אוטומטי לאזורים החדשים
+
+      } catch (error) {
+        console.error('Fetch error:', error);
+        message.error('שגיאה בתקשורת מול השרת. ודא שהשרת רץ.');
+      }
+    };
+
+    fetchMapArea();
+  }, [filtersFormState]); // ה-useEffect הזה ירוץ מחדש בכל פעם ש-filtersFormState משתנה
+
+  // פונקציה שמופעלת כשהמשתמש לוחץ "Submit" בטופס
   const onFinish = (values: any) => {
     setFiltersFormState(values);
     console.log('Form submitted with values:', values);
-    message.success(`Form submitted! Price: ${values.slider}, Years forward: ${values.yearsForward}`);
   };
-
-
 
   return (
     <ConfigProvider theme={dashboardTheme}>
@@ -56,7 +84,7 @@ const App = () => {
         <main className="dashboard-main">
           <div className="dashboard-grid">
             <Card className="dashboard-card dashboard-card--filters" bordered={false} title="Filters">
-              <FiltersForm onFinish={onFinish} onAreaSearch={onAreaSearch} />
+              <FiltersForm onFinish={onFinish} />
             </Card>
 
             <Card className="dashboard-card dashboard-card--map" bordered={false} title="Market map">
@@ -65,18 +93,10 @@ const App = () => {
               </div>
             </Card>
           </div>
-
         </main>
-
       </div>
-
     </ConfigProvider>
-
   )
-
 }
 
-
-
 export default App
-
