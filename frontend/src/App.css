@@ -325,5 +325,5 @@
 }
 
 .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
-  filter: brightness(0) saturate(100%) invert(69%) sepia(56%) saturate(3470%) hue-rotate(226deg) brightness(102%) contrast(102%);
+  filter: brightness(0) saturate(100%) invert(100%);
 }
