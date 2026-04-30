@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import FiltersForm from './components/FiltersForm';
 import HeatMap from './components/HeatMap';
 import { Card, ConfigProvider, message } from 'antd';
@@ -11,6 +11,7 @@ const App = () => {
   const [filtersFormState, setFiltersFormState] = useState<any>({ yearsForward: '1' });
   const [mapAreas, setMapAreas] = useState<any[]>([]);
   const [mapFitNonce, setMapFitNonce] = useState(0);
+  const isInitialFetchRef = useRef(true);
 
   useEffect(() => {
     const fetchMapArea = async () => {
@@ -39,18 +40,24 @@ const App = () => {
         if (!resAsJson || resAsJson.length === 0) {
           message.warning('לא נמצאו אזורי השקעה שמתאימים לסינון. נסה לשנות אזור או תקציב.');
           setMapAreas([]);
-          setMapFitNonce((n) => n + 1);
+          if (!isInitialFetchRef.current) {
+            setMapFitNonce((n) => n + 1);
+          }
           return;
         }
 
         // 5. נירמול הנתונים והצגתם על המפה
         const normalizedData = normalizeServerData(resAsJson);
         setMapAreas(normalizedData);
-        setMapFitNonce((n) => n + 1);
+        if (!isInitialFetchRef.current) {
+          setMapFitNonce((n) => n + 1);
+        }
 
       } catch (error) {
         console.error('Fetch error:', error);
         message.error('שגיאה בתקשורת מול השרת. ודאי שהשרת רץ.');
+      } finally {
+        isInitialFetchRef.current = false;
       }
     };
 

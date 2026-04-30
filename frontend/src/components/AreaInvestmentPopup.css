@@ -1,6 +1,6 @@
 .area-popup {
-  min-width: 220px;
-  max-width: 280px;
+  min-width: 210px;
+  max-width: 320px;
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   color: #d4d4d8;
 }
@@ -13,16 +13,16 @@
 
 .area-popup__growth {
   margin: 0 0 10px;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .area-popup__growth strong {
-  color: #fc6a6a;
+  color: #64e37f;
 }
 
 .area-popup__subtitle {
   margin: 0 0 6px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: #f4f4f5;
 }
@@ -30,10 +30,24 @@
 .area-popup__list {
   margin: 0;
   padding-left: 18px;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .area-popup__list li {
   margin-bottom: 4px;
   color: #f4f4f5;
+}
+
+.area-popup__list--two-columns {
+  columns: 2;
+  column-gap: 20px;
+  padding-left: 16px;
+}
+
+.area-popup__list--two-columns li {
+  break-inside: avoid;
+}
+
+.maplibregl-popup-content {
+  padding: 8px 10px;
 }
