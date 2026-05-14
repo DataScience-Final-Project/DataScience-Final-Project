@@ -51,12 +51,24 @@ def train_model_for_horizon(horizon: int):
     
     # Evaluate Performance
     print("\n--- 📈 Model Evaluation ---")
+    print("\n--- train ---")
+    predictions = model.predict(X_train)
+    
+    rmse = np.sqrt(mean_squared_error(y_train, predictions))
+    mae = mean_absolute_error(y_train, predictions)
+    r2 = r2_score(y_train, predictions)
+    
+    print(f"train RMSE (Log Return): {rmse:.4f}")
+    print(f"train MAE  (Log Return): {mae:.4f}")
+    print(f"train R²   (Log Return): {r2:.4f}")
+
+    print("\n--- test ---")
     predictions = model.predict(X_test)
     
     rmse = np.sqrt(mean_squared_error(y_test, predictions))
     mae = mean_absolute_error(y_test, predictions)
     r2 = r2_score(y_test, predictions)
-    
+
     print(f"Test RMSE (Log Return): {rmse:.4f}")
     print(f"Test MAE  (Log Return): {mae:.4f}")
     print(f"Test R²   (Log Return): {r2:.4f}")
@@ -73,7 +85,7 @@ def train_model_for_horizon(horizon: int):
     # 6. Save Model
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     model.save_model(save_path)
-    print(f"\n💾 Model successfully saved to: {save_path}")
+    print(f"\n Model successfully saved to: {save_path}")
     
     return model
 

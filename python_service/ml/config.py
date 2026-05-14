@@ -23,13 +23,14 @@ COLS_TO_DROP = [
 
 # --- XGBoost Hyperparameters ---
 XGB_PARAMS = {
-    'n_estimators': 1000,
-    'learning_rate': 0.05,
-    'max_depth': 6,
+    'n_estimators': 1500,
+    'learning_rate': 0.03,
+    'max_depth': 5,
     'subsample': 0.8,
-    'colsample_bytree': 0.8,
+    'colsample_bytree': 0.6,
     'enable_categorical': True, 
     'random_state': 42,
+    'alpha': 5,  # L1 regularization
     'n_jobs': -1,
-    'early_stopping_rounds': 50
+    'early_stopping_rounds': 60
 }
