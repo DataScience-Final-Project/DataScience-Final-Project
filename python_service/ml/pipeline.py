@@ -1,11 +1,10 @@
+import numpy as np
 import pandas as pd
 from typing import Tuple
 from sklearn.model_selection import train_test_split
 from ml.config import TARGET_COL, COLS_TO_DROP
 
 def prepare_data(df: pd.DataFrame, split_year: int) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
-    # השארנו את split_year בחתימת הפונקציה כדי לא לשבור את קובץ ה-train, 
-    # למרות שעכשיו אנחנו פשוט מתעלמים ממנו ועושים פיצול אקראי!
     
     print("Preparing data pipeline (Random Split 80/20)...")
     
@@ -55,6 +54,15 @@ def prepare_data(df: pd.DataFrame, split_year: int) -> Tuple[pd.DataFrame, pd.Da
         print(f"🧹 Dropping unhandled text columns to prevent crashes: {list(object_cols)}")
         df = df.drop(columns=object_cols)
 
+    poi_types = ['school', 'train', 'health', 'park', 'supermarket', 'mall',
+             'hotel', 'kindergarten', 'light_rail', 'bus', 'hospital', 'clinic']
+    for poi in poi_types:
+        now_col = f'{poi}_score_now'
+        future_col = f'{poi}_score_future'
+        if now_col in df.columns and future_col in df.columns:
+            df[f'{poi}_score_delta'] = df[future_col] - df[now_col]
+    df['log_price_t0'] = np.log(df['price_t0'])        
+
     # ==========================================
         
     # Quick Data Analysis
@@ -71,7 +79,17 @@ def prepare_data(df: pd.DataFrame, split_year: int) -> Tuple[pd.DataFrame, pd.Da
     X = df.drop(columns=cols_to_drop_safe)
     y = df[TARGET_COL]
     
-    # מבצעים את הפיצול האקראי - 80% לאימון, 20% למבחן
+    # SPLIT_YEAR = 2014
+    # TRAIN_START = 2010  # only recent history, macro conditions closer to test
+
+    # train_mask = (X['snapshot_year'] >= TRAIN_START) & (X['snapshot_year'] < SPLIT_YEAR)
+    # test_mask = X['snapshot_year'] >= SPLIT_YEAR
+
+
+    # X_train = X[train_mask].copy()
+    # y_train = y[train_mask].copy()
+    # X_test = X[test_mask].copy()
+    # y_test = y[test_mask].copy()
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     
     print(f"✅ Train set: {X_train.shape[0]} rows")

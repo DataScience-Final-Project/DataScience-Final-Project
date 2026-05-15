@@ -46,7 +46,7 @@ def train_model_for_horizon(horizon: int):
     model.fit(
         X_train, y_train,
         eval_set=[(X_train, y_train), (X_test, y_test)],
-        verbose=100 # Print evaluation metrics every 100 trees
+        verbose=1000 # Print evaluation metrics every 1000 trees
     )
     
     # Evaluate Performance

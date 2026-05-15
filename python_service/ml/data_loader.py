@@ -1,7 +1,10 @@
 import os
+from dotenv import load_dotenv
 import pandas as pd
 from sqlalchemy import create_engine
 
+load_dotenv()
+    
 def load_snapshot_data(horizon: int) -> pd.DataFrame:
     print(f"Loading data from database (Horizon: {horizon} years)...")
     db_url = f"postgresql://{os.getenv('PGUSER')}:{os.getenv('PGPASSWORD')}@{os.getenv('PGHOST', '127.0.0.1')}:{os.getenv('PGPORT', '5432')}/{os.getenv('PGDATABASE')}"
