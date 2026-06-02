@@ -87,9 +87,9 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0 }) => {
             "interpolate",
             ["linear"],
             ["get", "growth"],
-            0.4, "#64e37f",
+            0.4, "#fc6a6a",
             0.7, "#ffcf54",
-            0.9, "#fc6a6a"
+            0.9, "#64e37f"
           ],
           "fill-opacity": 0.88,
         },
@@ -154,7 +154,12 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0 }) => {
         );
 
         popupRef.current?.remove();
-        const popup = new maplibregl.Popup({ closeOnClick: true, maxWidth: "320px" })
+        const popup = new maplibregl.Popup({
+          closeOnClick: true,
+          maxWidth: "260px",
+          anchor: "bottom",
+          offset: 12,
+        })
           .setLngLat(event.lngLat)
           .setDOMContent(popupContainer)
           .addTo(map);
