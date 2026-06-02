@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { SequelizeModule } from '@nestjs/sequelize';
+import { AuthModule } from './auth/auth.module';
 import { CityModule } from './entities/city/city.module';
 import { GrowthClusterModule } from './entities/growthCluster/growthCluster.module';
+import { UserModule } from './entities/user/user.module';
 
 @Module({
   imports: [
@@ -20,8 +22,10 @@ import { GrowthClusterModule } from './entities/growthCluster/growthCluster.modu
         synchronize: false,
       }),
     }),
+    AuthModule,
     CityModule,
-    GrowthClusterModule
+    GrowthClusterModule,
+    UserModule,
   ],
 })
 
