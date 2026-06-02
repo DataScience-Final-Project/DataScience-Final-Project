@@ -5,6 +5,8 @@ export type PublicUser = {
     email: string;
     phone: string;
     username: string;
+    firstName: string;
+    lastName: string;
 };
 
 export type AuthenticatedRequest = Request & {

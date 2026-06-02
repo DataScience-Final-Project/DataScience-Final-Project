@@ -6,6 +6,8 @@ type UserAttributes = {
     email: string;
     phone: string;
     username: string;
+    firstName: string;
+    lastName: string;
     passwordHash: string;
     passwordSalt: string;
     passwordAlgorithm: string;
@@ -34,6 +36,12 @@ export class User extends Model<UserAttributes, UserCreationAttributes> {
 
     @Column({ type: DataType.TEXT, allowNull: false, unique: true })
     declare username: string;
+
+    @Column({ type: DataType.TEXT, allowNull: false, field: 'first_name' })
+    declare firstName: string;
+
+    @Column({ type: DataType.TEXT, allowNull: false, field: 'last_name' })
+    declare lastName: string;
 
     @Column({ type: DataType.TEXT, allowNull: false, field: 'password_hash' })
     declare passwordHash: string;

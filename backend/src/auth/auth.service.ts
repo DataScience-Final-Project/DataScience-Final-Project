@@ -26,6 +26,15 @@ type AuthSession = {
     maxAgeMs: number;
 };
 
+type NormalizedSignup = {
+    email: string;
+    phone: string;
+    username: string;
+    firstName: string;
+    lastName: string;
+    password: string;
+};
+
 @Injectable()
 export class AuthService {
     constructor(
@@ -55,6 +64,8 @@ export class AuthService {
             email: normalized.email,
             phone: normalized.phone,
             username: normalized.username,
+            firstName: normalized.firstName,
+            lastName: normalized.lastName,
             passwordHash: password.hash,
             passwordSalt: password.salt,
             passwordAlgorithm: PASSWORD_ALGORITHM,
@@ -127,10 +138,12 @@ export class AuthService {
         };
     }
 
-    private normalizeSignup(dto: SignupRequest): Required<SignupRequest> {
+    private normalizeSignup(dto: SignupRequest): NormalizedSignup {
         const email = this.normalizeRequired(dto.email, 'email').toLowerCase();
         const phone = this.normalizeRequired(dto.phone, 'phone');
         const username = this.normalizeRequired(dto.username, 'username');
+        const firstName = this.normalizeRequired(dto.firstName ?? dto.first_name, 'firstName');
+        const lastName = this.normalizeRequired(dto.lastName ?? dto.last_name, 'lastName');
         const password = this.normalizeRequired(dto.password, 'password');
 
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -145,11 +158,19 @@ export class AuthService {
             throw new BadRequestException('Username must be between 3 and 50 characters');
         }
 
+        if (firstName.length > 50) {
+            throw new BadRequestException('First name must be 50 characters or less');
+        }
+
+        if (lastName.length > 50) {
+            throw new BadRequestException('Last name must be 50 characters or less');
+        }
+
         if (password.length < 8) {
             throw new BadRequestException('Password must be at least 8 characters');
         }
 
-        return { email, phone, username, password };
+        return { email, phone, username, firstName, lastName, password };
     }
 
     private normalizeRequired(value: string | undefined, field: string): string {
@@ -221,6 +242,8 @@ export class AuthService {
             email: user.email,
             phone: user.phone,
             username: user.username,
+            firstName: user.firstName,
+            lastName: user.lastName,
         };
     }
 }
