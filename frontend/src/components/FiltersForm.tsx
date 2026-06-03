@@ -5,6 +5,8 @@ import styles from './FiltersForm.module.css';
 // הסרנו את onAreaSearch כי עכשיו החיפוש הוא חלק מהטופס ונשלח ב-onFinish
 type FiltersFormProps = {
   onFinish: (values: any) => void;
+  // ערכים שנדחפים לטופס כשמחילים חיפוש שמור (Saved Search)
+  appliedValues?: any;
 }
 
 const formatPriceSliderValue = (value?: number): string => {
@@ -18,8 +20,15 @@ const priceRangeMarks = {
   10_000_000: '₪1M+',
 };
 
-const FiltersForm: React.FC<FiltersFormProps> = ({ onFinish }) => {
+const FiltersForm: React.FC<FiltersFormProps> = ({ onFinish, appliedValues }) => {
   const [form] = Form.useForm();
+
+  // כשמחילים חיפוש שמור, מסנכרנים את שדות הטופס לערכים השמורים
+  useEffect(() => {
+    if (appliedValues) {
+      form.setFieldsValue(appliedValues);
+    }
+  }, [appliedValues, form]);
   
   // States עבור חיפוש הערים
   const [citiesList, setCitiesList] = useState<{label: string, value: string}[]>([]);

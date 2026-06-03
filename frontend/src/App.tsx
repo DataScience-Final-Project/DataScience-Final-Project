@@ -1,16 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import FiltersForm from './components/FiltersForm';
 import HeatMap from './components/HeatMap';
+import SavedSearches from './components/SavedSearches';
 import { Card, ConfigProvider, message } from 'antd';
 import propCastLogo from './assets/propCastLogo.png';
 import './App.css';
 import { dashboardTheme } from './dashboardTheme';
 import { normalizeServerData } from './dataTransformers';
+import type { SearchFilters } from './api/personalization';
 
 const App = () => {
   const [filtersFormState, setFiltersFormState] = useState<any>({ yearsForward: '1' });
   const [mapAreas, setMapAreas] = useState<any[]>([]);
   const [mapFitNonce, setMapFitNonce] = useState(0);
+  // ערכים שנדחפים בחזרה לטופס כשמחילים חיפוש שמור
+  const [appliedValues, setAppliedValues] = useState<any>(null);
+  // האם המשתמש כבר שלח את הטופס לפחות פעם אחת (שולט בכפתור השמירה)
+  const [hasSubmitted, setHasSubmitted] = useState(false);
   const isInitialFetchRef = useRef(true);
 
   useEffect(() => {
@@ -66,7 +72,23 @@ const App = () => {
 
   const onFinish = (values: any) => {
     setFiltersFormState(values);
+    setHasSubmitted(true);
     console.log('Form submitted with values:', values);
+  };
+
+  // הפעלת חיפוש שמור: דוחפים את הערכים לטופס וגם מרעננים את המפה
+  const handleApplySavedSearch = (filters: SearchFilters) => {
+    const values = { ...filters };
+    setAppliedValues(values);
+    setFiltersFormState(values);
+    setHasSubmitted(true);
+  };
+
+  // הפילטרים הנוכחיים שיישמרו בלחיצה על "Save search"
+  const currentFilters: SearchFilters = {
+    city: filtersFormState.city,
+    slider: filtersFormState.slider,
+    yearsForward: filtersFormState.yearsForward,
   };
 
   return (
@@ -80,9 +102,23 @@ const App = () => {
 
         <main className="dashboard-main">
           <div className="dashboard-grid">
-            <Card className="dashboard-card dashboard-card--filters" bordered={false} title="Filters">
-              <FiltersForm onFinish={onFinish} />
-            </Card>
+            <div className="dashboard-left-col">
+              <Card className="dashboard-card dashboard-card--filters" bordered={false} title="Filters">
+                <FiltersForm onFinish={onFinish} appliedValues={appliedValues} />
+              </Card>
+
+              <Card
+                className="dashboard-card dashboard-card--saved"
+                bordered={false}
+                title="Saved searches"
+              >
+                <SavedSearches
+                  currentFilters={currentFilters}
+                  canSave={hasSubmitted}
+                  onApply={handleApplySavedSearch}
+                />
+              </Card>
+            </div>
 
             <Card className="dashboard-card dashboard-card--map" bordered={false} title="Market map">
               <div className="heatmap-shell">

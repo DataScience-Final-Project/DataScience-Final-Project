@@ -1,0 +1,125 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  flex: 1;
+}
+
+/* Save button: matches the neon submit button language */
+.saveButton:global(.ant-btn) {
+  height: auto !important;
+  padding: 12px 24px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em;
+  border-radius: 999px !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+  background: linear-gradient(120deg, #7c5fffa9 0%, #b14bffac 45%, #ff5d90cf 72%, #ff9b54bd 100%) !important;
+  box-shadow:
+    0 0 14px rgba(155, 141, 248, 0.16),
+    0 6px 18px rgba(229, 154, 185, 0.14) !important;
+  transition: transform 0.2s ease, box-shadow 0.25s ease, filter 0.2s ease;
+}
+
+.saveButton:global(.ant-btn):hover:not(:disabled) {
+  transform: translateY(-2px);
+  color: #ffffff !important;
+  box-shadow:
+    0 0 18px rgba(155, 141, 248, 0.2),
+    0 8px 22px rgba(229, 154, 185, 0.16) !important;
+}
+
+.saveButton:global(.ant-btn):disabled {
+  opacity: 0.5;
+  filter: grayscale(0.4);
+}
+
+.hint {
+  margin: 0;
+  font-size: 12px;
+  color: #a1a1aa;
+  text-align: center;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 2px;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.item:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.itemHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.itemTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f4f4f5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deleteButton:global(.ant-btn) {
+  color: #a1a1aa !important;
+  flex-shrink: 0;
+}
+
+.deleteButton:global(.ant-btn):hover {
+  color: #fb7185 !important;
+  background: rgba(251, 113, 133, 0.1) !important;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag:global(.ant-tag) {
+  margin: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e4e4e7;
+  font-size: 11px;
+  padding: 1px 10px;
+}
+
+.showButton:global(.ant-btn) {
+  align-self: flex-start;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+  font-weight: 500;
+}
+
+.showButton:global(.ant-btn):hover {
+  background: rgba(125, 95, 255, 0.22) !important;
+  border-color: rgba(155, 141, 248, 0.5) !important;
+  color: #ffffff !important;
+}
