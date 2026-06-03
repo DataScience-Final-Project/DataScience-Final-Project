@@ -35,6 +35,46 @@ type HeatMapProps = {
   fitBoundsNonce?: number;
 };
 
+const GROWTH_COLOR_PALETTE = ["#16a34a", "#4ade80", "#facc15", "#ef4444", "#b91c1c"] as const;
+const GROWTH_QUANTILES = [0, 0.25, 0.5, 0.75, 1] as const;
+
+const DEFAULT_ANNUAL_STOPS: [number, string][] = [
+  [0, GROWTH_COLOR_PALETTE[0]],
+  [4, GROWTH_COLOR_PALETTE[1]],
+  [8, GROWTH_COLOR_PALETTE[2]],
+  [12, GROWTH_COLOR_PALETTE[3]],
+  [16, GROWTH_COLOR_PALETTE[4]],
+];
+
+function growthValues(features: AreaFeature[]): number[] {
+  return features
+    .map((f) => Number(f.properties.growth))
+    .filter((v) => Number.isFinite(v))
+    .sort((a, b) => a - b);
+}
+
+/** Spread colors across the current result set (lowest → green, highest → red). */
+function growthColorStops(features: AreaFeature[]): [number, string][] {
+  const values = growthValues(features);
+  if (!values.length) return DEFAULT_ANNUAL_STOPS;
+
+  const pick = (p: number) => values[Math.min(values.length - 1, Math.round(p * (values.length - 1)))];
+
+  const stops: [number, string][] = GROWTH_QUANTILES.map((p, i) => [pick(p), GROWTH_COLOR_PALETTE[i]]);
+
+  for (let i = 1; i < stops.length; i++) {
+    if (stops[i][0] <= stops[i - 1][0]) {
+      stops[i] = [stops[i - 1][0] + 0.001, stops[i][1]];
+    }
+  }
+  return stops;
+}
+
+function growthFillColorExpression(stops: [number, string][]): maplibregl.ExpressionSpecification {
+  const growth: maplibregl.ExpressionSpecification = ["to-number", ["get", "growth"]];
+  return ["interpolate-hcl", ["linear"], growth, ...stops.flat()];
+}
+
 function boundsFromPolygonFeatures(features: AreaFeature[]): maplibregl.LngLatBounds | null {
   const bounds = new maplibregl.LngLatBounds();
   let hasPoint = false;
@@ -83,14 +123,7 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0 }) => {
         type: "fill", // שינוי מ-heatmap ל-fill
         source: "growth-source",
         paint: {
-          "fill-color": [
-            "interpolate",
-            ["linear"],
-            ["get", "growth"],
-            0.4, "#fc6a6a",
-            0.7, "#ffcf54",
-            0.9, "#64e37f"
-          ],
+          "fill-color": growthFillColorExpression(DEFAULT_ANNUAL_STOPS),
           "fill-opacity": 0.88,
         },
       });
@@ -124,9 +157,10 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0 }) => {
         const areaName = properties.name || "Selected area";
         
         // אנחנו משתמשים בציון המקורי אם הוא קיים, אחרת מכפילים ב-100 (לפי הסקאלה החדשה)
-        const gradeValue = properties.originalGrade !== undefined 
-            ? properties.originalGrade 
-            : Number(properties.growth ?? 0) * 10; 
+        const gradeValue =
+          properties.originalGrade !== undefined
+            ? Number(properties.originalGrade)
+            : Number(properties.growth ?? 0);
 
         // --- הפיכת הערים ממחרוזת של MapLibre למערך אמיתי ---
         let parsedCities: string[] = [];
@@ -194,6 +228,14 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0 }) => {
 
       const src = map?.getSource("growth-source") as GeoJSONSource | undefined;
       if (src) src.setData(geojson as any);
+
+      if (map?.getLayer("growth-fill")) {
+        map.setPaintProperty(
+          "growth-fill",
+          "fill-color",
+          growthFillColorExpression(growthColorStops(areas)),
+        );
+      }
     }
 
     if (map.isStyleLoaded()) {

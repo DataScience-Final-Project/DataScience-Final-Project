@@ -20,8 +20,8 @@ const CITY_CENTER_MAX_DISTANCE_METERS = 30_000;
 const cityCenters = JSON.stringify(
     (cities as CityCenter[]).map(city => ({
         name: city.name.trim(),
-        long: city.long,
-        latt: city.latt,
+        longitude: city.long,
+        latitude: city.latt,
     })),
 );
 

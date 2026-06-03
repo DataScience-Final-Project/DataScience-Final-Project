@@ -107,6 +107,7 @@ const FiltersForm: React.FC<FiltersFormProps> = ({ onFinish }) => {
         <Segmented
           block
           options={['1', '2', '3', '4', '5', '6+']}
+          onChange={() => form.submit()}
         />
       </Form.Item>
 

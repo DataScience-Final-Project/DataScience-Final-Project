@@ -47,7 +47,7 @@ const App = () => {
         }
 
         // 5. נירמול הנתונים והצגתם על המפה
-        const normalizedData = normalizeServerData(resAsJson);
+        const normalizedData = normalizeServerData(resAsJson, years);
         setMapAreas(normalizedData);
         if (!isInitialFetchRef.current) {
           setMapFitNonce((n) => n + 1);

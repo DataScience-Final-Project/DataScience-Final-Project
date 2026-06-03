@@ -1,4 +1,7 @@
-export const normalizeServerData = (serverData: any) => {
+import { annualizedGrowthPercent, parseYearsForward } from "./growthMath";
+
+export const normalizeServerData = (serverData: any, yearsForward: string | number = 1) => {
+  const years = parseYearsForward(yearsForward);
   const normalizedData = serverData.map((item: any, index: number) => {
     
     // מושכים את מערך הערים מהשרת (אם אין, נשים מערך ריק)
@@ -12,8 +15,8 @@ export const normalizeServerData = (serverData: any) => {
       properties: {
         id: index + 1,
         name: areaName,
-        // שימי לב: שיניתי פה לחילוק ב-100 כי הציון בתמונה הוא 53! (אם הציון נשאר מתוך 10, תחזירי לחילוק ב-10)
-        growth: item.grade / 10, 
+        // Popup: total projected % for selected horizon; map: annualized % (stable color scale)
+        growth: annualizedGrowthPercent(item.grade, years),
         originalGrade: item.grade,
         // שומרים את מערך הערים כדי שיוצג ברשימה בפופאפ
         suggestedAreas: citiesArray, 
