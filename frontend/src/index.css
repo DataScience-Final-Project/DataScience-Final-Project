@@ -1,18 +1,42 @@
-@import url('https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+html {
+  min-height: 100%;
+}
 
 body {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  height: 100vh;
-  width: 100vw;
-  font-family: 'Poppins', sans-serif;
-  background-color: #e3edf2
+  min-height: 100vh;
+  width: 100%;
+  font-family: 'Inter', sans-serif;
+  color: #a1a1aa;
+  background-color: #0a0a0f;
+  background-image:
+    radial-gradient(circle at 16% 18%, rgba(88, 72, 170, 0.28) 0%, transparent 42%),
+    radial-gradient(circle at 84% 10%, rgba(255, 93, 143, 0.18) 0%, transparent 36%),
+    linear-gradient(
+      145deg,
+      #0a0a0f 0%,
+      #0d0d12 48%,
+      #1a1a2e 100%
+    );
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-size: cover;
 }
 
 * {
-  font-family: 'Poppins', sans-serif;
+  box-sizing: border-box;
 }
+
+*,
+*::before,
+*::after {
+  font-family: 'Inter', sans-serif;
+}
+
 #root {
-  height: 100%;
+  min-height: 100vh;
 }

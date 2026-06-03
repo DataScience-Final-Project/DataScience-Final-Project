@@ -1,0 +1,119 @@
+.auth-shell {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 440px;
+  padding: 40px 36px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 40px rgba(125, 95, 255, 0.15);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.auth-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 28px;
+  text-align: center;
+}
+
+.auth-logo {
+  height: 64px;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 0 12px rgba(125, 95, 255, 0.3));
+  margin-bottom: 6px;
+  cursor: pointer;
+}
+
+.auth-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.auth-subtitle {
+  margin: 0;
+  font-size: 14px;
+  color: #a1a1aa;
+}
+
+.auth-form .ant-form-item-label > label {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #f4f4f5 !important;
+}
+
+.auth-form .ant-input,
+.auth-form .ant-input-affix-wrapper,
+.auth-form .ant-input-password {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  color: #ffffff !important;
+}
+
+.auth-form .ant-input::placeholder {
+  color: #71717a !important;
+}
+
+.auth-form .ant-input-affix-wrapper .ant-input {
+  background: transparent !important;
+  border: none !important;
+}
+
+.auth-form .ant-input-password-icon,
+.auth-form .ant-input-suffix {
+  color: #a1a1aa !important;
+}
+
+.auth-submit {
+  height: 46px;
+  border-radius: 14px !important;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.auth-row {
+  display: flex;
+  gap: 14px;
+}
+
+.auth-row .ant-form-item {
+  flex: 1;
+}
+
+.auth-footer {
+  margin-top: 18px;
+  text-align: center;
+  font-size: 14px;
+  color: #a1a1aa;
+}
+
+.auth-link {
+  color: #b8aeff;
+  font-weight: 600;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.auth-link:hover {
+  color: #d6cdff;
+  text-decoration: underline;
+}
