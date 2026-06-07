@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button, ConfigProvider, Form, Input, message } from 'antd';
 import propCastLogo from '../assets/propCastLogo.png';
 import { dashboardTheme } from '../dashboardTheme';
-import { signup, type SignupPayload } from '../api/auth';
+import { signup, setCurrentUser, type SignupPayload } from '../api/auth';
 import './Auth.css';
 
 const Register = () => {
@@ -21,6 +21,7 @@ const Register = () => {
         lastName: values.lastName.trim(),
         password: values.password,
       });
+      setCurrentUser(user);
       message.success(`Welcome, ${user.firstName}!`);
       navigate('/dashboard');
     } catch (error) {

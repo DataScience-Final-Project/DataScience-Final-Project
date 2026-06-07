@@ -8,8 +8,10 @@ import './App.css';
 import { dashboardTheme } from './dashboardTheme';
 import { normalizeServerData } from './dataTransformers';
 import type { SearchFilters } from './api/personalization';
+import { getCurrentUser } from './api/auth';
 
 const App = () => {
+  const currentUser = getCurrentUser();
   const [filtersFormState, setFiltersFormState] = useState<any>({ yearsForward: '1' });
   const [mapAreas, setMapAreas] = useState<any[]>([]);
   const [mapFitNonce, setMapFitNonce] = useState(0);
@@ -95,6 +97,11 @@ const App = () => {
     <ConfigProvider theme={dashboardTheme}>
       <div className="app-shell">
         <header className="dashboard-header">
+          {currentUser && (
+            <div className="dashboard-welcome">
+              Welcome, {currentUser.firstName}
+            </div>
+          )}
           <div className="dashboard-brand">
             <img src={propCastLogo} alt="PropCast" />
           </div>

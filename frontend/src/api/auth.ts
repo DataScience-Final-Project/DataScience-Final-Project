@@ -46,3 +46,23 @@ export const login = (payload: LoginPayload) =>
 
 export const signup = (payload: SignupPayload) =>
   request<{ user: PublicUser }>('/auth/signup', payload);
+
+const CURRENT_USER_KEY = 'propcast:currentUser';
+
+export const setCurrentUser = (user: PublicUser): void => {
+  localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+};
+
+export const getCurrentUser = (): PublicUser | null => {
+  const raw = localStorage.getItem(CURRENT_USER_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as PublicUser;
+  } catch {
+    return null;
+  }
+};
+
+export const clearCurrentUser = (): void => {
+  localStorage.removeItem(CURRENT_USER_KEY);
+};

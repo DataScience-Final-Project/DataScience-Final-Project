@@ -11,9 +11,21 @@
 }
 
 .dashboard-header {
+  position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+.dashboard-welcome {
+  position: absolute;
+  left: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 18px;
+  font-weight: 600;
+  color: #e9e6ff;
+  text-shadow: 0 0 10px rgba(125, 95, 255, 0.25);
 }
 
 .dashboard-brand {

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button, ConfigProvider, Form, Input, message } from 'antd';
 import propCastLogo from '../assets/propCastLogo.png';
 import { dashboardTheme } from '../dashboardTheme';
-import { login, type LoginPayload } from '../api/auth';
+import { login, setCurrentUser, type LoginPayload } from '../api/auth';
 import './Auth.css';
 
 const Login = () => {
@@ -17,6 +17,7 @@ const Login = () => {
         identifier: values.identifier.trim(),
         password: values.password,
       });
+      setCurrentUser(user);
       message.success(`Welcome back, ${user.firstName}!`);
       navigate('/dashboard');
     } catch (error) {
