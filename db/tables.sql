@@ -1,5 +1,19 @@
 CREATE EXTENSION IF NOT EXISTS postgis;
 
+CREATE TABLE users (
+  user_id            BIGSERIAL PRIMARY KEY,
+  email              TEXT NOT NULL UNIQUE,
+  phone              TEXT NOT NULL UNIQUE,
+  username           TEXT NOT NULL UNIQUE,
+  first_name         TEXT NOT NULL,
+  last_name          TEXT NOT NULL,
+  password_hash      TEXT NOT NULL,
+  password_salt      TEXT NOT NULL,
+  password_algorithm TEXT NOT NULL,
+  created_at         TIMESTAMP NOT NULL DEFAULT now(),
+  updated_at         TIMESTAMP NOT NULL DEFAULT now()
+);
+
 CREATE TABLE properties (
   property_id      BIGSERIAL PRIMARY KEY,
   city_name        TEXT,

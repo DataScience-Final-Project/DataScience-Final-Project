@@ -81,6 +81,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  /* Keep mixed Hebrew/Latin segments in logical left-to-right order */
+  direction: ltr;
+  unicode-bidi: isolate;
+  text-align: left;
 }
 
 .deleteButton:global(.ant-btn) {

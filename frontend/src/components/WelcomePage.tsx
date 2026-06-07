@@ -21,9 +21,9 @@ const WelcomePage = () => {
             size="large"
             block
             className="welcome-btn welcome-btn--primary"
-            onClick={() => navigate('/signup')}
+            onClick={() => navigate('/login')}
           >
-            Sign Up
+            Log In
           </Button>
           <Button
             size="large"
