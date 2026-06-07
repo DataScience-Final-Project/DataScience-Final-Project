@@ -26,13 +26,10 @@ const App = () => {
       const years = filtersFormState.yearsForward?.replace('+', '') || '1';
       
       // 2. בניית הלינק לשרת
-      let url = `http://localhost:4000/growth-clusters?years=${years}`;
+      let url = `http://localhost:4000/neighborhood-predictions?years=${years}`;
 
       if (filtersFormState.city) {
         url += `&city=${encodeURIComponent(filtersFormState.city)}`;
-      }
-      if (filtersFormState.slider && filtersFormState.slider.length === 2) {
-        url += `&minPrice=${filtersFormState.slider[0]}&maxPrice=${filtersFormState.slider[1]}`;
       }
 
       console.log('Sending real request to URL:', url);

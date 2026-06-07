@@ -1,6 +1,6 @@
 import pandas as pd
 import geopandas as gpd
-from shapely.geometry import Polygon
+from shapely.geometry import  MultiPolygon, Polygon
 import xgboost as xgb
 import numpy as np
 from sqlalchemy import create_engine
@@ -30,6 +30,7 @@ def build_and_save_heatmap_data():
         FROM property_features_snapshot s
         JOIN properties p ON s.property_id = p.property_id
         WHERE s.snapshot_year = 2014
+          AND s.price_t0 BETWEEN 500000 AND 15000000
     """
     df_all = pd.read_sql_query(query, engine)
 
@@ -41,6 +42,17 @@ def build_and_save_heatmap_data():
         if col not in cols_to_keep_as_text and col not in ['lat', 'lon']:
             df_all[col] = pd.to_numeric(df_all[col], errors='coerce')
 
+    # Compute derived features to match what pipeline.py builds during training
+    poi_types = ['school', 'train', 'health', 'park', 'supermarket', 'mall',
+                 'hotel', 'kindergarten', 'light_rail', 'bus', 'hospital', 'clinic']
+    for poi in poi_types:
+        now_col = f'{poi}_score_now'
+        future_col = f'{poi}_score_future'
+        if now_col in df_all.columns and future_col in df_all.columns:
+            df_all[f'{poi}_score_delta'] = df_all[future_col] - df_all[now_col]
+
+    df_all['log_price_t0'] = np.log(df_all['price_t0'])
+
     expected_cols = model_5y.get_booster().feature_names
 
     # ==========================================
@@ -49,11 +61,20 @@ def build_and_save_heatmap_data():
     print("Predicting 5-year and 10-year growth for each property...")
     X = df_all[[c for c in expected_cols if c in df_all.columns]].copy()
 
-    X['num_rooms'] = X['num_rooms'].fillna(3)
-    X['location_accuracy'] = X['location_accuracy'].fillna(1)
-    # Fill NaN city before casting to category so no unknown category reaches the model
-    X['city_name'] = X['city_name'].fillna(X['city_name'].mode()[0]).astype('category')
-    X['location_accuracy'] = X['location_accuracy'].astype('category')
+    if 'num_rooms' in X.columns:
+        X['num_rooms'] = X['num_rooms'].fillna(3)
+
+    if 'location_accuracy' not in X.columns:
+        X['location_accuracy'] = 1
+    X['location_accuracy'] = X['location_accuracy'].fillna(1).astype('category')
+
+    if 'city_name' in X.columns:
+        X['city_name'] = X['city_name'].fillna(X['city_name'].mode()[0]).astype('category')
+
+    # Ensure all expected columns are present (fill missing ones with NaN)
+    for col in expected_cols:
+        if col not in X.columns:
+            X[col] = np.nan
 
     X = X[expected_cols]
 
@@ -78,10 +99,12 @@ def build_and_save_heatmap_data():
         growth_5y_pct=('growth_5y', 'mean'),
         growth_10y_pct=('growth_10y', 'mean'),
         city_name=('city_name', 'first'),
+        price_now=('price_t0', 'mean'),
     ).reset_index()
 
     hex_data['growth_5y_pct'] = hex_data['growth_5y_pct'].round(2)
     hex_data['growth_10y_pct'] = hex_data['growth_10y_pct'].round(2)
+    hex_data['price_now'] = hex_data['price_now'].round(0).astype('Int64')
 
     # ==========================================
     # Build polygon geometry from H3 index
@@ -100,10 +123,11 @@ def build_and_save_heatmap_data():
     # ==========================================
     print("\nSaving H3 Heatmap Polygons to Database...")
     output_gdf = gpd.GeoDataFrame(
-        hex_data[['city_name', 'neighborhood_name', 'baseline_year', 'growth_5y_pct', 'growth_10y_pct', 'geom']],
+        hex_data[['city_name', 'neighborhood_name', 'baseline_year', 'growth_5y_pct', 'growth_10y_pct', 'price_now', 'geom']],
         geometry='geom',
         crs="EPSG:4326"
     )
+    output_gdf['geom'] = output_gdf['geom'].apply(lambda x: MultiPolygon([x]) if x.geom_type == 'Polygon' else x)
     output_gdf.to_postgis('neighborhood_predictions', engine, if_exists='replace', index=False)
 
     print("H3 Grid Heatmap successfully saved. Ready for UI consumption.")

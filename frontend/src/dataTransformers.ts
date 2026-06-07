@@ -2,33 +2,40 @@ import { annualizedGrowthPercent, parseYearsForward } from "./growthMath";
 
 export const normalizeServerData = (serverData: any, yearsForward: string | number = 1) => {
   const years = parseYearsForward(yearsForward);
-  const normalizedData = serverData.map((item: any, index: number) => {
-    
-    // מושכים את מערך הערים מהשרת (אם אין, נשים מערך ריק)
-    const citiesArray = item.cities || [];
-    
-    // קובעים את שם האזור: נחבר את שמות הערים (למשל "חדרה, אור עקיבא"). אם אין עיר, נרשום "אזור 1"
-    const areaName = citiesArray.length > 0 ? citiesArray.join(", ") : `אזור ${index + 1}`;
+  return serverData.map((item: any, index: number) => {
+    // New format: neighborhood_predictions (geom is already a GeoJSON geometry object)
+    if (item.geom && typeof item.geom === 'object') {
+      const name = item.cityName || item.neighborhoodName || `אזור ${index + 1}`;
+      const horizonYears: number = item.horizonYears || 5;
+      return {
+        type: "Feature",
+        properties: {
+          id: index + 1,
+          name,
+          growth: annualizedGrowthPercent(item.grade, horizonYears),
+          originalGrade: item.grade,
+          suggestedAreas: item.cityName ? [item.cityName] : [],
+        },
+        geometry: item.geom,
+      };
+    }
 
+    // Legacy format: growth_clusters (coordinates as {x,y}[])
+    const citiesArray = item.cities || [];
+    const areaName = citiesArray.length > 0 ? citiesArray.join(", ") : `אזור ${index + 1}`;
     return {
       type: "Feature",
       properties: {
         id: index + 1,
         name: areaName,
-        // Popup: total projected % for selected horizon; map: annualized % (stable color scale)
         growth: annualizedGrowthPercent(item.grade, years),
         originalGrade: item.grade,
-        // שומרים את מערך הערים כדי שיוצג ברשימה בפופאפ
-        suggestedAreas: citiesArray, 
+        suggestedAreas: citiesArray,
       },
       geometry: {
         type: "Polygon",
-        coordinates: [
-          item.coordinates.map((coordinate: any) => [coordinate.x, coordinate.y]),
-        ]
-      }
+        coordinates: [item.coordinates.map((c: any) => [c.x, c.y])],
+      },
     };
   });
-  
-  return normalizedData;
 };
