@@ -11,7 +11,7 @@ const WelcomePage = () => {
       <div className="welcome-card">
         <div className="welcome-brand">
           <img src={propCastLogo} alt="PropCast" className="welcome-logo" />
-          <h1 className="welcome-title">PropCast</h1>
+          
           <p className="welcome-subtitle">Smarter real estate investment insights</p>
         </div>
 
