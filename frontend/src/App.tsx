@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import FiltersForm from './components/FiltersForm';
 import HeatMap from './components/HeatMap';
+import PropertiesList from './components/PropertiesList';
+import type { PropertyRow } from './components/PropertiesList';
 import SavedSearches from './components/SavedSearches';
 import { Card, ConfigProvider, message } from 'antd';
 import propCastLogo from './assets/propCastLogo.png';
@@ -18,6 +20,10 @@ const App = () => {
   // האם המשתמש כבר שלח את הטופס לפחות פעם אחת (שולט בכפתור השמירה)
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const isInitialFetchRef = useRef(true);
+
+  const [selectedArea, setSelectedArea] = useState<{ neighborhoodName: string; displayName: string } | null>(null);
+  const [areaProperties, setAreaProperties] = useState<PropertyRow[]>([]);
+  const [propertiesLoading, setPropertiesLoading] = useState(false);
 
   useEffect(() => {
     const fetchMapArea = async () => {
@@ -66,6 +72,21 @@ const App = () => {
 
     fetchMapArea();
   }, [filtersFormState]);
+
+  useEffect(() => {
+    if (!selectedArea) return;
+    setPropertiesLoading(true);
+    fetch(`http://localhost:4000/properties-in-area?neighborhoodName=${encodeURIComponent(selectedArea.neighborhoodName)}`)
+      .then((r) => r.json())
+      .then((data) => setAreaProperties(data))
+      .catch(() => message.error('Failed to load properties for this area.'))
+      .finally(() => setPropertiesLoading(false));
+  }, [selectedArea]);
+
+  const handleAreaClick = (neighborhoodName: string, displayName: string) => {
+    setSelectedArea({ neighborhoodName, displayName });
+    setAreaProperties([]);
+  };
 
   const onFinish = (values: any) => {
     setFiltersFormState(values);
@@ -119,10 +140,24 @@ const App = () => {
 
             <Card className="dashboard-card dashboard-card--map" bordered={false} title="Market map">
               <div className="heatmap-shell">
-                <HeatMap areas={mapAreas} fitBoundsNonce={mapFitNonce} />
+                <HeatMap areas={mapAreas} fitBoundsNonce={mapFitNonce} onAreaClick={handleAreaClick} />
               </div>
             </Card>
           </div>
+
+          {selectedArea && (
+            <Card
+              className="dashboard-card dashboard-card--properties"
+              bordered={false}
+              title={null}
+            >
+              <PropertiesList
+                areaName={selectedArea.displayName}
+                properties={areaProperties}
+                loading={propertiesLoading}
+              />
+            </Card>
+          )}
         </main>
       </div>
     </ConfigProvider>

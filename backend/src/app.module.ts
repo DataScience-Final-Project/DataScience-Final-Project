@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { CityModule } from './entities/city/city.module';
 import { GrowthClusterModule } from './entities/growthCluster/growthCluster.module';
 import { NeighborhoodPredictionModule } from './entities/neighborhoodPrediction/neighborhoodPrediction.module';
+import { PropertiesModule } from './entities/properties/properties.module';
 import { UserModule } from './entities/user/user.module';
 
 @Module({
@@ -27,6 +28,7 @@ import { UserModule } from './entities/user/user.module';
     CityModule,
     GrowthClusterModule,
     NeighborhoodPredictionModule,
+    PropertiesModule,
     UserModule,
   ],
 })

@@ -17,7 +17,7 @@ const formatPriceSliderValue = (value?: number): string => {
 
 const priceRangeMarks = {
   0: '₪0',
-  10_000_000: '₪1M+',
+  10_000_000: '₪10M+',
 };
 
 const FiltersForm: React.FC<FiltersFormProps> = ({ onFinish, appliedValues }) => {
@@ -76,7 +76,7 @@ const FiltersForm: React.FC<FiltersFormProps> = ({ onFinish, appliedValues }) =>
       layout="vertical"
       onFinish={onFinish}
       className={styles.form}
-      initialValues={{ yearsForward: '1' }}
+      initialValues={{ yearsForward: '5' }}
     >
       {/* שורת חיפוש העיר */}
       <Form.Item name="city" label="City">
@@ -115,7 +115,7 @@ const FiltersForm: React.FC<FiltersFormProps> = ({ onFinish, appliedValues }) =>
       <Form.Item label="Years Forward" name="yearsForward">
         <Segmented
           block
-          options={['1', '2', '3', '4', '5', '6+']}
+          options={['5', '10']}
           onChange={() => form.submit()}
         />
       </Form.Item>

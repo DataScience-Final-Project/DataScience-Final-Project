@@ -33,6 +33,8 @@ type HeatMapProps = {
   areas: AreaFeature[];
   /** Increment after a search or reset so the map fits bounds to the current `areas`. */
   fitBoundsNonce?: number;
+  /** Called when the user clicks a neighborhood polygon. */
+  onAreaClick?: (neighborhoodName: string, areaDisplayName: string) => void;
 };
 
 const GROWTH_COLOR_PALETTE = ["#16a34a", "#4ade80", "#facc15", "#ef4444", "#b91c1c"] as const;
@@ -91,7 +93,7 @@ function boundsFromPolygonFeatures(features: AreaFeature[]): maplibregl.LngLatBo
   return hasPoint ? bounds : null;
 }
 
-const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0 }) => {
+const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0, onAreaClick }) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const popupRef = useRef<maplibregl.Popup | null>(null);
@@ -153,8 +155,12 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0 }) => {
         if (!selectedFeature) return;
 
         const properties = selectedFeature.properties as any;
-        
+
         const areaName = properties.name || "Selected area";
+        const neighborhoodName: string | null = properties.neighborhoodName ?? null;
+        if (neighborhoodName && onAreaClick) {
+          onAreaClick(neighborhoodName, areaName);
+        }
         
         // אנחנו משתמשים בציון המקורי אם הוא קיים, אחרת מכפילים ב-100 (לפי הסקאלה החדשה)
         const gradeValue =
