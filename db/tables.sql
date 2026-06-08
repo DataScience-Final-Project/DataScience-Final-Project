@@ -14,6 +14,17 @@ CREATE TABLE users (
   updated_at         TIMESTAMP NOT NULL DEFAULT now()
 );
 
+CREATE TABLE saved_searches (
+  id          BIGSERIAL PRIMARY KEY,
+  user_id     BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  name        TEXT NOT NULL,
+  filters     JSONB NOT NULL,
+  created_at  TIMESTAMP NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_saved_searches_user
+ON saved_searches(user_id);
+
 CREATE TABLE properties (
   property_id      BIGSERIAL PRIMARY KEY,
   city_name        TEXT,
