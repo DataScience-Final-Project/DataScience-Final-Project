@@ -13,6 +13,7 @@ export const normalizeServerData = (serverData: any, yearsForward: string | numb
           id: index + 1,
           name,
           neighborhoodName: item.neighborhoodName ?? null,
+          priceNow: item.priceNow ?? null,
           growth: annualizedGrowthPercent(item.grade, horizonYears),
           originalGrade: item.grade,
           suggestedAreas: item.cityName ? [item.cityName] : [],

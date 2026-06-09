@@ -57,7 +57,15 @@ const App = () => {
 
         // 5. נירמול הנתונים והצגתם על המפה
         const normalizedData = normalizeServerData(resAsJson, years);
-        setMapAreas(normalizedData);
+
+        const [minPrice, maxPrice]: [number, number] = filtersFormState.slider ?? [0, 10_000_000];
+        const filtered = normalizedData.filter((f: any) => {
+          const p = f.properties.priceNow;
+          if (p == null) return true;
+          return p >= minPrice && p <= maxPrice;
+        });
+
+        setMapAreas(filtered);
         if (!isInitialFetchRef.current) {
           setMapFitNonce((n) => n + 1);
         }
