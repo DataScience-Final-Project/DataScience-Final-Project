@@ -1,6 +1,8 @@
-// Mock personalization API (Saved Searches + Watchlist).
-// Backed by localStorage so data persists between reloads and the UI feels real.
-// Swap these functions for real HTTP calls once the backend endpoints exist.
+// Personalization API.
+// Saved Searches are persisted per-user on the backend (Postgres) and reached
+// over HTTP with the JWT auth cookie. The Watchlist is still a localStorage mock.
+
+const API_BASE_URL = 'http://localhost:4000';
 
 export type SearchFilters = {
   city?: string;
@@ -24,11 +26,8 @@ export type WatchlistItem = {
   createdAt: string;
 };
 
-// In a real app this comes from the authenticated session. Mocked for now.
-const MOCK_USER_KEY = 'me';
-const SAVED_SEARCHES_KEY = `propcast.${MOCK_USER_KEY}.savedSearches`;
-const WATCHLIST_KEY = `propcast.${MOCK_USER_KEY}.watchlist`;
-const SEED_FLAG_KEY = `propcast.${MOCK_USER_KEY}.seeded`;
+const WATCHLIST_KEY = 'propcast.me.watchlist';
+const SEED_FLAG_KEY = 'propcast.me.seeded';
 
 const NETWORK_DELAY_MS = 250;
 
@@ -51,26 +50,11 @@ const writeJson = (key: string, value: unknown): void => {
   localStorage.setItem(key, JSON.stringify(value));
 };
 
-// Seed a couple of example items the first time, so the dashboard isn't empty.
+// Seed a watchlist example the first time, so the dashboard isn't empty.
 const seedIfNeeded = (): void => {
   if (localStorage.getItem(SEED_FLAG_KEY)) return;
 
   const now = new Date().toISOString();
-  const seededSearches: SavedSearch[] = [
-    {
-      id: createId(),
-      name: 'תל אביב · עד ₪3M · 5 שנים',
-      filters: { city: 'תל אביב - יפו', slider: [0, 3_000_000], yearsForward: '5' },
-      createdAt: now,
-    },
-    {
-      id: createId(),
-      name: 'חיפה · תקציב נמוך · 3 שנים',
-      filters: { city: 'חיפה', slider: [0, 1_500_000], yearsForward: '3' },
-      createdAt: now,
-    },
-  ];
-
   const seededWatchlist: WatchlistItem[] = [
     {
       id: createId(),
@@ -82,42 +66,43 @@ const seedIfNeeded = (): void => {
     },
   ];
 
-  writeJson(SAVED_SEARCHES_KEY, seededSearches);
   writeJson(WATCHLIST_KEY, seededWatchlist);
   localStorage.setItem(SEED_FLAG_KEY, '1');
 };
 
-/* ——— Saved Searches ——— */
+/* ——— Saved Searches (server-side, per authenticated user) ——— */
 
-export const listSavedSearches = (): Promise<SavedSearch[]> => {
-  seedIfNeeded();
-  const items = readJson<SavedSearch[]>(SAVED_SEARCHES_KEY, []);
-  return delay(items);
+const apiRequest = async <T>(path: string, init?: RequestInit): Promise<T> => {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    ...init,
+  });
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const message = (data && (data.message || data.error)) || 'Request failed';
+    throw new Error(Array.isArray(message) ? message.join(', ') : message);
+  }
+
+  return data as T;
 };
+
+export const listSavedSearches = (): Promise<SavedSearch[]> =>
+  apiRequest<SavedSearch[]>('/saved-searches');
 
 export const createSavedSearch = (
   name: string,
   filters: SearchFilters,
-): Promise<SavedSearch> => {
-  seedIfNeeded();
-  const items = readJson<SavedSearch[]>(SAVED_SEARCHES_KEY, []);
-  const saved: SavedSearch = {
-    id: createId(),
-    name: name.trim() || 'חיפוש ללא שם',
-    filters,
-    createdAt: new Date().toISOString(),
-  };
-  writeJson(SAVED_SEARCHES_KEY, [saved, ...items]);
-  return delay(saved);
-};
+): Promise<SavedSearch> =>
+  apiRequest<SavedSearch>('/saved-searches', {
+    method: 'POST',
+    body: JSON.stringify({ name, filters }),
+  });
 
-export const deleteSavedSearch = (id: string): Promise<void> => {
-  const items = readJson<SavedSearch[]>(SAVED_SEARCHES_KEY, []);
-  writeJson(
-    SAVED_SEARCHES_KEY,
-    items.filter((item) => item.id !== id),
-  );
-  return delay(undefined);
+export const deleteSavedSearch = async (id: string): Promise<void> => {
+  await apiRequest<{ ok: boolean }>(`/saved-searches/${id}`, { method: 'DELETE' });
 };
 
 /* ——— Watchlist (followed areas) ——— */

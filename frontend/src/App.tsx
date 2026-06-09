@@ -1,17 +1,27 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import FiltersForm from './components/FiltersForm';
 import HeatMap from './components/HeatMap';
 import PropertiesList from './components/PropertiesList';
 import type { PropertyRow } from './components/PropertiesList';
 import SavedSearches from './components/SavedSearches';
-import { Card, ConfigProvider, message } from 'antd';
+import { Button, Card, ConfigProvider, message } from 'antd';
+import { LogoutOutlined } from '@ant-design/icons';
 import propCastLogo from './assets/propCastLogo.png';
 import './App.css';
 import { dashboardTheme } from './dashboardTheme';
 import { normalizeServerData } from './dataTransformers';
 import type { SearchFilters } from './api/personalization';
+import { getCurrentUser, clearCurrentUser } from './api/auth';
 
 const App = () => {
+  const navigate = useNavigate();
+  const currentUser = getCurrentUser();
+
+  const handleLogout = () => {
+    clearCurrentUser();
+    navigate('/');
+  };
   const [filtersFormState, setFiltersFormState] = useState<any>({ yearsForward: '1' });
   const [mapAreas, setMapAreas] = useState<any[]>([]);
   const [mapFitNonce, setMapFitNonce] = useState(0);
@@ -121,9 +131,21 @@ const App = () => {
     <ConfigProvider theme={dashboardTheme}>
       <div className="app-shell">
         <header className="dashboard-header">
+          {currentUser && (
+            <div className="dashboard-welcome">
+              Welcome, {currentUser.firstName}
+            </div>
+          )}
           <div className="dashboard-brand">
             <img src={propCastLogo} alt="PropCast" />
           </div>
+          <Button
+            className="dashboard-logout"
+            icon={<LogoutOutlined />}
+            onClick={handleLogout}
+          >
+            Log out
+          </Button>
         </header>
 
         <main className="dashboard-main">

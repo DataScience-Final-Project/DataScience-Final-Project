@@ -6,6 +6,7 @@ import { CityModule } from './entities/city/city.module';
 import { GrowthClusterModule } from './entities/growthCluster/growthCluster.module';
 import { NeighborhoodPredictionModule } from './entities/neighborhoodPrediction/neighborhoodPrediction.module';
 import { PropertiesModule } from './entities/properties/properties.module';
+import { SavedSearchModule } from './entities/savedSearch/savedSearch.module';
 import { UserModule } from './entities/user/user.module';
 
 @Module({
@@ -29,6 +30,7 @@ import { UserModule } from './entities/user/user.module';
     GrowthClusterModule,
     NeighborhoodPredictionModule,
     PropertiesModule,
+    SavedSearchModule,
     UserModule,
   ],
 })

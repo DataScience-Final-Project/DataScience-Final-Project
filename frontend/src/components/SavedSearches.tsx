@@ -125,7 +125,9 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
             return (
               <div key={item.id} className={styles.item}>
                 <div className={styles.itemHeader}>
-                  <span className={styles.itemTitle}>{item.name}</span>
+                  <span className={styles.itemTitle} dir="ltr">
+                    {item.name}
+                  </span>
                   <Popconfirm
                     title="Delete this saved search?"
                     okText="Delete"

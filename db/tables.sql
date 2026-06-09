@@ -1,5 +1,30 @@
 CREATE EXTENSION IF NOT EXISTS postgis;
 
+CREATE TABLE users (
+  user_id            BIGSERIAL PRIMARY KEY,
+  email              TEXT NOT NULL UNIQUE,
+  phone              TEXT NOT NULL UNIQUE,
+  username           TEXT NOT NULL UNIQUE,
+  first_name         TEXT NOT NULL,
+  last_name          TEXT NOT NULL,
+  password_hash      TEXT NOT NULL,
+  password_salt      TEXT NOT NULL,
+  password_algorithm TEXT NOT NULL,
+  created_at         TIMESTAMP NOT NULL DEFAULT now(),
+  updated_at         TIMESTAMP NOT NULL DEFAULT now()
+);
+
+CREATE TABLE saved_searches (
+  id          BIGSERIAL PRIMARY KEY,
+  user_id     BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  name        TEXT NOT NULL,
+  filters     JSONB NOT NULL,
+  created_at  TIMESTAMP NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_saved_searches_user
+ON saved_searches(user_id);
+
 CREATE TABLE properties (
   property_id      BIGSERIAL PRIMARY KEY,
   city_name        TEXT,

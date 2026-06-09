@@ -11,7 +11,7 @@ const WelcomePage = () => {
       <div className="welcome-card">
         <div className="welcome-brand">
           <img src={propCastLogo} alt="PropCast" className="welcome-logo" />
-          <h1 className="welcome-title">PropCast</h1>
+          
           <p className="welcome-subtitle">Smarter real estate investment insights</p>
         </div>
 
@@ -21,9 +21,9 @@ const WelcomePage = () => {
             size="large"
             block
             className="welcome-btn welcome-btn--primary"
-            onClick={() => navigate('/signup')}
+            onClick={() => navigate('/login')}
           >
-            Sign Up
+            Log In
           </Button>
           <Button
             size="large"
