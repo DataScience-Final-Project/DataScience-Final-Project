@@ -112,6 +112,19 @@ const FiltersForm: React.FC<FiltersFormProps> = ({ onFinish, appliedValues }) =>
 
       <Divider />
 
+      <Form.Item label="Rooms" name="roomsRange">
+        <Slider
+          range={{ draggableTrack: true }}
+          min={1}
+          max={10}
+          step={0.5}
+          marks={{ 1: '1', 5: '5', 10: '10+' }}
+          tooltip={{ formatter: (v) => `${v} rooms` }}
+        />
+      </Form.Item>
+
+      <Divider />
+
       <Form.Item label="Years Forward" name="yearsForward">
         <Segmented
           block

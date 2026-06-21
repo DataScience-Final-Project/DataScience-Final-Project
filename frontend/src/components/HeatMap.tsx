@@ -33,8 +33,8 @@ type HeatMapProps = {
   areas: AreaFeature[];
   /** Increment after a search or reset so the map fits bounds to the current `areas`. */
   fitBoundsNonce?: number;
-  /** Called when the user clicks a neighborhood polygon. */
-  onAreaClick?: (neighborhoodName: string, areaDisplayName: string) => void;
+  /** Called when the user clicks a hex polygon. Receives the raw H3 index and a display name. */
+  onAreaClick?: (h3Index: string, areaDisplayName: string) => void;
 };
 
 const GROWTH_COLOR_PALETTE = ["#16a34a", "#4ade80", "#facc15", "#ef4444", "#b91c1c"] as const;
@@ -156,17 +156,16 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0, onAreaClic
 
         const properties = selectedFeature.properties as any;
 
-        const areaName = properties.name || "Selected area";
-        const neighborhoodName: string | null = properties.neighborhoodName ?? null;
-        if (neighborhoodName && onAreaClick) {
-          onAreaClick(neighborhoodName, areaName);
+        const areaName = properties.name || properties.neighborhoodName || "Selected area";
+        const h3Index: string | null = properties.h3Index ?? null;
+
+        if (h3Index && onAreaClick) {
+          onAreaClick(h3Index, areaName);
         }
         
-        // אנחנו משתמשים בציון המקורי אם הוא קיים, אחרת מכפילים ב-100 (לפי הסקאלה החדשה)
-        const gradeValue =
-          properties.originalGrade !== undefined
-            ? Number(properties.originalGrade)
-            : Number(properties.growth ?? 0);
+        // Use grade (total % over horizon) so it matches the per-property percentChange values
+        const gradeValue = Number(properties.grade ?? properties.growth ?? 0);
+        const horizonYears: number = Number(properties.horizonYears ?? 5);
 
         // --- הפיכת הערים ממחרוזת של MapLibre למערך אמיתי ---
         let parsedCities: string[] = [];
@@ -189,7 +188,8 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0, onAreaClic
           <AreaInvestmentPopup
             areaName={areaName}
             growthPercent={gradeValue}
-            suggestedAreas={parsedCities} // מעבירים את המערך האמיתי מהשרת!
+            horizonYears={horizonYears}
+            suggestedAreas={parsedCities}
           />
         );
 

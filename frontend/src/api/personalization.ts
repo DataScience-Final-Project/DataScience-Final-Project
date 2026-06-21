@@ -8,6 +8,7 @@ export type SearchFilters = {
   city?: string;
   slider?: [number, number];
   yearsForward?: string;
+  roomsRange?: [number, number];
 };
 
 export type SavedSearch = {

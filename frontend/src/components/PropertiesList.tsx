@@ -10,8 +10,10 @@ export type PropertyRow = {
   numRooms: number;
   buildingYear: number;
   propertyType: string;
-  floorNumber: number;
+  floorNumber?: number;
+  buildingFloors?: number;
   price: number;
+  percentChange?: number;
 };
 
 type Props = {
@@ -40,9 +42,8 @@ const columns: ColumnsType<PropertyRow> = [
   },
   {
     title: 'Floor',
-    dataIndex: 'floorNumber',
-    key: 'floorNumber',
-    render: (v) => v ?? '—',
+    key: 'floor',
+    render: (_, r) => r.buildingFloors ?? r.floorNumber ?? '—',
   },
   {
     title: 'Built',
@@ -57,6 +58,13 @@ const columns: ColumnsType<PropertyRow> = [
     render: (v: number) =>
       v != null ? `₪${v.toLocaleString('he-IL')}` : '—',
     sorter: (a, b) => (a.price ?? 0) - (b.price ?? 0),
+  },
+  {
+    title: 'Predicted Growth',
+    dataIndex: 'percentChange',
+    key: 'percentChange',
+    render: (v: number) => v != null ? `${v.toFixed(1)}%` : '—',
+    sorter: (a, b) => (a.percentChange ?? 0) - (b.percentChange ?? 0),
   },
 ];
 

@@ -26,6 +26,7 @@
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/sequelize": "^11.0.1",
     "axios": "^1.14.0",
+    "h3-js": "^4.4.0",
     "pg": "^8.20.0",
     "pg-hstore": "^2.3.4",
     "reflect-metadata": "^0.2.2",

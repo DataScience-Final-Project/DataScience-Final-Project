@@ -2,8 +2,20 @@ import { annualizedGrowthPercent, parseYearsForward } from "./growthMath";
 
 export const normalizeServerData = (serverData: any, yearsForward: string | number = 1) => {
   const years = parseYearsForward(yearsForward);
+
+  // New format: FeatureCollection from POST /heatmap
+  if (serverData && serverData.type === 'FeatureCollection' && Array.isArray(serverData.features)) {
+    return serverData.features.map((feature: any) => ({
+      ...feature,
+      properties: {
+        ...feature.properties,
+        growth: annualizedGrowthPercent(feature.properties.grade, feature.properties.horizonYears ?? years),
+      },
+    }));
+  }
+
+  // Flat array from GET /neighborhood-predictions (geom is a GeoJSON geometry object)
   return serverData.map((item: any, index: number) => {
-    // New format: neighborhood_predictions (geom is already a GeoJSON geometry object)
     if (item.geom && typeof item.geom === 'object') {
       const name = item.cityName || item.neighborhoodName || `אזור ${index + 1}`;
       const horizonYears: number = item.horizonYears || 5;

@@ -31,54 +31,45 @@ const App = () => {
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const isInitialFetchRef = useRef(true);
 
-  const [selectedArea, setSelectedArea] = useState<{ neighborhoodName: string; displayName: string } | null>(null);
+  const [selectedArea, setSelectedArea] = useState<{ h3Index: string; displayName: string } | null>(null);
   const [areaProperties, setAreaProperties] = useState<PropertyRow[]>([]);
   const [propertiesLoading, setPropertiesLoading] = useState(false);
 
   useEffect(() => {
     const fetchMapArea = async () => {
-      
-      // 1. חילוץ הנתונים מהטופס
-      const years = filtersFormState.yearsForward?.replace('+', '') || '1';
-      
-      // 2. בניית הלינק לשרת
-      let url = `http://localhost:4000/neighborhood-predictions?years=${years}`;
+      const years = filtersFormState.yearsForward?.replace('+', '') || '5';
+      const [minPrice, maxPrice]: [number, number] = filtersFormState.slider ?? [0, 10_000_000];
+      const [minRooms, maxRooms]: [number, number] = filtersFormState.roomsRange ?? [1, 10];
 
-      if (filtersFormState.city) {
-        url += `&city=${encodeURIComponent(filtersFormState.city)}`;
-      }
+      const body: Record<string, any> = { years: Number(years) };
+      if (filtersFormState.city) body.city = filtersFormState.city;
+      if (minPrice > 0)          body.minPrice = minPrice;
+      if (maxPrice < 10_000_000) body.maxPrice = maxPrice;
+      if (minRooms > 1)          body.minRooms = minRooms;
+      if (maxRooms < 10)         body.maxRooms = maxRooms;
 
-      console.log('Sending real request to URL:', url);
+      console.log('POST /heatmap', body);
 
       try {
-        // 3. שליחת הבקשה לשרת האמיתי
-        const res = await fetch(url);
+        const res = await fetch('http://localhost:4000/heatmap', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
         const resAsJson = await res.json();
-        console.log("DATA FROM SERVER:", resAsJson);
-        // 4. טיפול במצב שבו אין תוצאות
-        if (!resAsJson || resAsJson.length === 0) {
+        console.log('DATA FROM SERVER:', resAsJson);
+
+        const features = resAsJson?.features ?? [];
+        if (!features.length) {
           message.warning('לא נמצאו אזורי השקעה שמתאימים לסינון. נסה לשנות אזור או תקציב.');
           setMapAreas([]);
-          if (!isInitialFetchRef.current) {
-            setMapFitNonce((n) => n + 1);
-          }
+          if (!isInitialFetchRef.current) setMapFitNonce((n) => n + 1);
           return;
         }
 
-        // 5. נירמול הנתונים והצגתם על המפה
         const normalizedData = normalizeServerData(resAsJson, years);
-
-        const [minPrice, maxPrice]: [number, number] = filtersFormState.slider ?? [0, 10_000_000];
-        const filtered = normalizedData.filter((f: any) => {
-          const p = f.properties.priceNow;
-          if (p == null) return true;
-          return p >= minPrice && p <= maxPrice;
-        });
-
-        setMapAreas(filtered);
-        if (!isInitialFetchRef.current) {
-          setMapFitNonce((n) => n + 1);
-        }
+        setMapAreas(normalizedData);
+        if (!isInitialFetchRef.current) setMapFitNonce((n) => n + 1);
 
       } catch (error) {
         console.error('Fetch error:', error);
@@ -94,15 +85,16 @@ const App = () => {
   useEffect(() => {
     if (!selectedArea) return;
     setPropertiesLoading(true);
-    fetch(`http://localhost:4000/properties-in-area?neighborhoodName=${encodeURIComponent(selectedArea.neighborhoodName)}`)
+    const years = filtersFormState.yearsForward?.replace('+', '') || '5';
+    fetch(`http://localhost:4000/heatmap/${selectedArea.h3Index}/properties?years=${years}`)
       .then((r) => r.json())
       .then((data) => setAreaProperties(data))
       .catch(() => message.error('Failed to load properties for this area.'))
       .finally(() => setPropertiesLoading(false));
-  }, [selectedArea]);
+  }, [selectedArea, filtersFormState.yearsForward]);
 
-  const handleAreaClick = (neighborhoodName: string, displayName: string) => {
-    setSelectedArea({ neighborhoodName, displayName });
+  const handleAreaClick = (h3Index: string, displayName: string) => {
+    setSelectedArea({ h3Index, displayName });
     setAreaProperties([]);
   };
 
@@ -125,6 +117,7 @@ const App = () => {
     city: filtersFormState.city,
     slider: filtersFormState.slider,
     yearsForward: filtersFormState.yearsForward,
+    roomsRange: filtersFormState.roomsRange,
   };
 
   return (

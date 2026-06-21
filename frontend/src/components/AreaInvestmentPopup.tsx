@@ -3,12 +3,14 @@ import "./AreaInvestmentPopup.css";
 type AreaInvestmentPopupProps = {
   areaName: string;
   growthPercent: number;
+  horizonYears: number;
   suggestedAreas: string[];
 };
 
 const AreaInvestmentPopup = ({
   areaName,
   growthPercent,
+  horizonYears,
   suggestedAreas,
 }: AreaInvestmentPopupProps) => {
   const isTwoColumnList = suggestedAreas.length > 6;
@@ -17,7 +19,7 @@ const AreaInvestmentPopup = ({
     <div className="area-popup" aria-label={`Investment details for ${areaName}`}>
       {/* <h3 className="area-popup__title">{areaName}</h3> */}
       <p className="area-popup__growth">
-        Price growth: <strong>{growthPercent.toFixed(1)}%</strong>
+        {horizonYears}-year growth: <strong>{growthPercent.toFixed(1)}%</strong>
       </p>
       
       {/* נציג את הרשימה רק אם באמת יש ערים להציג */}
