@@ -3,10 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { SequelizeModule } from '@nestjs/sequelize';
 import { AuthModule } from './auth/auth.module';
 import { CityModule } from './entities/city/city.module';
-import { GrowthClusterModule } from './entities/growthCluster/growthCluster.module';
 import { HeatmapModule } from './entities/heatmap/heatmap.module';
-import { NeighborhoodPredictionModule } from './entities/neighborhoodPrediction/neighborhoodPrediction.module';
-import { PropertiesModule } from './entities/properties/properties.module';
 import { SavedSearchModule } from './entities/savedSearch/savedSearch.module';
 import { UserModule } from './entities/user/user.module';
 
@@ -28,10 +25,7 @@ import { UserModule } from './entities/user/user.module';
     }),
     AuthModule,
     CityModule,
-    GrowthClusterModule,
     HeatmapModule,
-    NeighborhoodPredictionModule,
-    PropertiesModule,
     SavedSearchModule,
     UserModule,
   ],
