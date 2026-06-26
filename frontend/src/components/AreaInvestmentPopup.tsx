@@ -4,12 +4,14 @@ type AreaInvestmentPopupProps = {
   areaName: string;
   growthPercent: number;
   suggestedAreas: string[];
+  onViewProperties?: () => void;
 };
 
 const AreaInvestmentPopup = ({
   areaName,
   growthPercent,
   suggestedAreas,
+  onViewProperties,
 }: AreaInvestmentPopupProps) => {
   const isTwoColumnList = suggestedAreas.length > 6;
 
@@ -30,6 +32,11 @@ const AreaInvestmentPopup = ({
             ))}
           </ul>
         </>
+      )}
+      {onViewProperties && (
+        <button className="area-popup__properties-button" type="button" onClick={onViewProperties}>
+          View properties in this polygon
+        </button>
       )}
     </div>
   );

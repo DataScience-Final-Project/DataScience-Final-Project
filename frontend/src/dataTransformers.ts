@@ -13,7 +13,8 @@ export const normalizeServerData = (serverData: any, yearsForward: string | numb
     return {
       type: "Feature",
       properties: {
-        id: index + 1,
+        id: item.id ?? index + 1,
+        clusterId: item.id ?? index + 1,
         name: areaName,
         // Popup: total projected % for selected horizon; map: annualized % (stable color scale)
         growth: annualizedGrowthPercent(item.grade, years),

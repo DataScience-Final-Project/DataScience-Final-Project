@@ -5,6 +5,7 @@ import App from './App.tsx'
 import WelcomePage from './components/WelcomePage.tsx'
 import Login from './components/Login.tsx'
 import Register from './components/Register.tsx'
+import PropertyDetailsPage from './components/PropertyDetailsPage.tsx'
 
 createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
@@ -13,6 +14,7 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/dashboard" element={<App />} />
+            <Route path="/dashboard/properties/:propertyId" element={<PropertyDetailsPage />} />
         </Routes>
     </BrowserRouter>,
 )

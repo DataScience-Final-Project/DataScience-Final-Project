@@ -33,6 +33,12 @@ type HeatMapProps = {
   areas: AreaFeature[];
   /** Increment after a search or reset so the map fits bounds to the current `areas`. */
   fitBoundsNonce?: number;
+  selectedClusterId?: number | null;
+  /** Increment whenever navigation returns to the map with a selected polygon. */
+  selectionNonce?: number;
+  isActive?: boolean;
+  onAreaSelected?: (clusterId: number, areaName: string) => void;
+  onViewProperties?: (clusterId: number, areaName: string) => void;
 };
 
 const GROWTH_COLOR_PALETTE = ["#16a34a", "#4ade80", "#facc15", "#ef4444", "#b91c1c"] as const;
@@ -91,10 +97,74 @@ function boundsFromPolygonFeatures(features: AreaFeature[]): maplibregl.LngLatBo
   return hasPoint ? bounds : null;
 }
 
-const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0 }) => {
+function setMapData(map: MapLibreMap, areas: AreaFeature[], selectedClusterId: number | null) {
+  const source = map.getSource("growth-source") as GeoJSONSource | undefined;
+  if (source) {
+    source.setData({
+      type: "FeatureCollection",
+      features: areas,
+    } as any);
+  }
+
+  const selectedSource = map.getSource("growth-selected-source") as GeoJSONSource | undefined;
+  if (selectedSource) {
+    const selectedArea = areas.find(
+      (area) => Number(area.properties.clusterId ?? area.properties.id) === selectedClusterId,
+    );
+    selectedSource.setData({
+      type: "FeatureCollection",
+      features: selectedArea ? [selectedArea] : [],
+    } as any);
+  }
+
+  if (map.getLayer("growth-fill")) {
+    map.setPaintProperty(
+      "growth-fill",
+      "fill-color",
+      growthFillColorExpression(growthColorStops(areas)),
+    );
+  }
+}
+
+function selectedAreaFeature(areas: AreaFeature[], selectedClusterId: number | null) {
+  if (!selectedClusterId) return null;
+  return areas.find((area) => Number(area.properties.clusterId ?? area.properties.id) === selectedClusterId) ?? null;
+}
+
+function fitAllAreas(map: MapLibreMap, areas: AreaFeature[]) {
+  const bounds = boundsFromPolygonFeatures(areas);
+  if (!bounds) return;
+
+  map.resize();
+  map.fitBounds(bounds, { padding: 48, maxZoom: 14, duration: 600 });
+}
+
+const HeatMap: React.FC<HeatMapProps> = ({
+  areas,
+  fitBoundsNonce = 0,
+  selectedClusterId = null,
+  selectionNonce = 0,
+  isActive = true,
+  onAreaSelected,
+  onViewProperties,
+}) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const popupRef = useRef<maplibregl.Popup | null>(null);
+  const onAreaSelectedRef = useRef(onAreaSelected);
+  const onViewPropertiesRef = useRef(onViewProperties);
+  const areasRef = useRef(areas);
+  const selectedClusterIdRef = useRef(selectedClusterId);
+
+  useEffect(() => {
+    onAreaSelectedRef.current = onAreaSelected;
+    onViewPropertiesRef.current = onViewProperties;
+  }, [onAreaSelected, onViewProperties]);
+
+  useEffect(() => {
+    areasRef.current = areas;
+    selectedClusterIdRef.current = selectedClusterId;
+  }, [areas, selectedClusterId]);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
@@ -128,7 +198,14 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0 }) => {
         },
       });
 
-      // 2. שכבת קווי מתאר (כדי שהאזורים יהיו מובחנים)
+      map.addSource("growth-selected-source", {
+        type: "geojson",
+        data: {
+          type: "FeatureCollection",
+          features: [],
+        },
+      });
+
       map.addLayer({
         id: "growth-outline",
         type: "line",
@@ -137,8 +214,24 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0 }) => {
           "line-color": "#ffffff",
           "line-width": 1,
           "line-opacity": 0.75
-        }
+        },
       });
+
+      map.addLayer({
+        id: "growth-selected-outline",
+        type: "line",
+        source: "growth-selected-source",
+        paint: {
+          "line-color": "#c4b5fd",
+          "line-width": 4,
+          "line-opacity": 1,
+        },
+      });
+
+      setMapData(map, areasRef.current, selectedClusterIdRef.current);
+      if (selectedClusterIdRef.current) {
+        requestAnimationFrame(() => fitAllAreas(map, areasRef.current));
+      }
 
       map.on("mouseenter", "growth-fill", () => {
         map.getCanvas().style.cursor = "pointer";
@@ -155,6 +248,7 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0 }) => {
         const properties = selectedFeature.properties as any;
         
         const areaName = properties.name || "Selected area";
+        const clusterId = Number(properties.clusterId ?? properties.id);
         
         // אנחנו משתמשים בציון המקורי אם הוא קיים, אחרת מכפילים ב-100 (לפי הסקאלה החדשה)
         const gradeValue =
@@ -184,8 +278,17 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0 }) => {
             areaName={areaName}
             growthPercent={gradeValue}
             suggestedAreas={parsedCities} // מעבירים את המערך האמיתי מהשרת!
+            onViewProperties={
+              Number.isFinite(clusterId)
+                ? () => onViewPropertiesRef.current?.(clusterId, areaName)
+                : undefined
+            }
           />
         );
+
+        if (Number.isFinite(clusterId)) {
+          onAreaSelectedRef.current?.(clusterId, areaName);
+        }
 
         popupRef.current?.remove();
         const popup = new maplibregl.Popup({
@@ -221,21 +324,7 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0 }) => {
     if (!map) return;
 
     function update() {
-      const geojson = {
-        type: "FeatureCollection",
-        features: areas,
-      };
-
-      const src = map?.getSource("growth-source") as GeoJSONSource | undefined;
-      if (src) src.setData(geojson as any);
-
-      if (map?.getLayer("growth-fill")) {
-        map.setPaintProperty(
-          "growth-fill",
-          "fill-color",
-          growthFillColorExpression(growthColorStops(areas)),
-        );
-      }
+      setMapData(map!, areas, selectedClusterId);
     }
 
     if (map.isStyleLoaded()) {
@@ -243,7 +332,22 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0 }) => {
     } else {
       map.once("load", update);
     }
-  }, [areas]);
+  }, [areas, selectedClusterId]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isActive || !selectedClusterId) return;
+    const selectedArea = selectedAreaFeature(areas, selectedClusterId);
+    if (!selectedArea) return;
+
+    const fit = () => {
+      setMapData(map, areas, selectedClusterId);
+      fitAllAreas(map, areas);
+    };
+
+    if (map.isStyleLoaded()) requestAnimationFrame(fit);
+    else map.once("load", fit);
+  }, [areas, isActive, selectedClusterId, selectionNonce]);
 
   useEffect(() => {
     const map = mapRef.current;
