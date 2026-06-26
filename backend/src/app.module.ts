@@ -4,6 +4,7 @@ import { SequelizeModule } from '@nestjs/sequelize';
 import { AuthModule } from './auth/auth.module';
 import { CityModule } from './entities/city/city.module';
 import { GrowthClusterModule } from './entities/growthCluster/growthCluster.module';
+import { PropertyModule } from './entities/property/property.module';
 import { SavedSearchModule } from './entities/savedSearch/savedSearch.module';
 import { UserModule } from './entities/user/user.module';
 
@@ -21,11 +22,13 @@ import { UserModule } from './entities/user/user.module';
         database: config.get<string>('DB_NAME', ''),
         autoLoadModels: true,
         synchronize: false,
+        logging: false
       }),
     }),
     AuthModule,
     CityModule,
     GrowthClusterModule,
+    PropertyModule,
     SavedSearchModule,
     UserModule,
   ],

@@ -11,8 +11,8 @@ function toDecimalGrowthRate(avgGrowth: number): number {
 export class GrowthClusterService {
     constructor(private readonly repository: GrowthClusterRepository) { }
 
-    async fetchAll(years: number, city?: string) {
-        const growthClusters = await this.repository.fetchAll(city);
+    async fetchAll(years: number, city?: string, clusterId?: number) {
+        const growthClusters = await this.repository.fetchAll(city, clusterId);
 
         const yearsAhead = Number.isFinite(Number(years)) && Number(years) > 0
             ? Number(years)
@@ -24,6 +24,7 @@ export class GrowthClusterService {
             const polygonGrowthPercent = (Math.pow(1 + rate, yearsAhead) - 1) * 100;
 
             return {
+                id: cluster.id,
                 grade: Number(polygonGrowthPercent.toFixed(3)),
                 cities: cluster.cities,
                 coordinates: geom.coordinates[0].map((coord: number[]) => ({ x: coord[0], y: coord[1] }))

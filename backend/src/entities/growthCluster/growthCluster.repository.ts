@@ -42,7 +42,7 @@ export class GrowthClusterRepository {
         private readonly sequelize: Sequelize,
     ) { }
 
-    fetchAll(city?: string): Promise<GrowthClusterRow[]> {
+    fetchAll(city?: string, clusterId?: number): Promise<GrowthClusterRow[]> {
         const normalizedCity = city?.trim() || null;
 
         return this.sequelize.query<GrowthClusterRow>(
@@ -75,11 +75,13 @@ export class GrowthClusterRepository {
                     AND ST_Intersects(g.geom, p.geom)
             ) c ON TRUE
             WHERE (:city IS NULL OR c.cities IS NOT NULL)
+                AND (:clusterId IS NULL OR g.id = :clusterId)
             ORDER BY g.id
             `,
             {
                 replacements: {
                     city: normalizedCity,
+                    clusterId: clusterId ?? null,
                     cityCenters,
                     cityCenterMaxDistanceMeters: CITY_CENTER_MAX_DISTANCE_METERS,
                 },
