@@ -9,6 +9,8 @@ export type SearchFilters = {
   slider?: [number, number];
   yearsForward?: string;
   roomsRange?: [number, number];
+  floorsRange?: [number, number];
+  minGrowth?: number;
 };
 
 export type SavedSearch = {

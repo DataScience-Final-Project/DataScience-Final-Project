@@ -38,8 +38,10 @@ CREATE TABLE properties (
 
   num_rooms        FLOAT,
   building_year    INT,
+  floor_number     INT,
   building_floors  INT,
-  property_type    SMALLINT
+  property_type    SMALLINT,
+  asset_type       TEXT
 );
 
 CREATE INDEX idx_properties_geom

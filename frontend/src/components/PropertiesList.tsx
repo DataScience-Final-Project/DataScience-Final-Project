@@ -9,9 +9,9 @@ export type PropertyRow = {
   houseNumber: string;
   numRooms: number;
   buildingYear: number;
-  propertyType: string;
-  floorNumber?: number;
-  buildingFloors?: number;
+  assetType?: string | null;
+  floorNumber?: number | null;
+  buildingFloors?: number | null;
   price: number;
   percentChange?: number;
 };
@@ -30,9 +30,8 @@ const columns: ColumnsType<PropertyRow> = [
   },
   {
     title: 'Type',
-    dataIndex: 'propertyType',
-    key: 'propertyType',
-    render: (v) => v ? <Tag>{v}</Tag> : '—',
+    key: 'assetType',
+    render: (_, r) => r.assetType ? <Tag>{r.assetType}</Tag> : '—',
   },
   {
     title: 'Rooms',
@@ -43,7 +42,7 @@ const columns: ColumnsType<PropertyRow> = [
   {
     title: 'Floor',
     key: 'floor',
-    render: (_, r) => r.buildingFloors ?? r.floorNumber ?? '—',
+    render: (_, r) => r.floorNumber ?? r.buildingFloors ?? '—',
   },
   {
     title: 'Built',

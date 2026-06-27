@@ -9,6 +9,9 @@ export class HeatmapFiltersDto {
     maxPrice?: number;
     minRooms?: number;
     maxRooms?: number;
+    minFloors?: number;
+    maxFloors?: number;
+    minGrowth?: number;
     propertyType?: number;
 }
 
@@ -26,6 +29,9 @@ export class HeatmapService {
             maxPrice:     dto.maxPrice     != null ? Number(dto.maxPrice) : null,
             minRooms:     dto.minRooms     != null ? Number(dto.minRooms) : null,
             maxRooms:     dto.maxRooms     != null ? Number(dto.maxRooms) : null,
+            minFloors:    dto.minFloors    != null ? Number(dto.minFloors) : null,
+            maxFloors:    dto.maxFloors    != null ? Number(dto.maxFloors) : null,
+            minGrowth:    dto.minGrowth    != null ? Number(dto.minGrowth)  : null,
             propertyType: dto.propertyType != null ? Number(dto.propertyType) : null,
         };
 
@@ -69,6 +75,7 @@ export class HeatmapService {
                     grade: parseFloat(avg.toFixed(2)),
                     horizonYears,
                     count: bucket.properties.length,
+                    suggestedAreas: [...new Set(bucket.properties.map(p => p.cityName).filter(Boolean))],
                 },
             });
         }

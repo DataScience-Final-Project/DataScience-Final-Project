@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Divider, Form, Segmented, Slider, Select, message } from 'antd';
+import { Button, Divider, Form, InputNumber, Segmented, Slider, Select, message } from 'antd';
 import styles from './FiltersForm.module.css';
 
 // הסרנו את onAreaSearch כי עכשיו החיפוש הוא חלק מהטופס ונשלח ב-onFinish
@@ -76,7 +76,7 @@ const FiltersForm: React.FC<FiltersFormProps> = ({ onFinish, appliedValues }) =>
       layout="vertical"
       onFinish={onFinish}
       className={styles.form}
-      initialValues={{ yearsForward: '5' }}
+      initialValues={{ yearsForward: '5', roomsRange: [1, 10], floorsRange: [0, 30], slider: [0, 10000000], minGrowth: 0 }}
     >
       {/* שורת חיפוש העיר */}
       <Form.Item name="city" label="City">
@@ -120,6 +120,30 @@ const FiltersForm: React.FC<FiltersFormProps> = ({ onFinish, appliedValues }) =>
           step={0.5}
           marks={{ 1: '1', 5: '5', 10: '10+' }}
           tooltip={{ formatter: (v) => `${v} rooms` }}
+        />
+      </Form.Item>
+
+      <Divider />
+
+      <Form.Item label="Floor" name="floorsRange">
+        <Slider
+          range={{ draggableTrack: true }}
+          min={0}
+          max={30}
+          step={1}
+          marks={{ 0: '0', 10: '10', 20: '20', 30: '30+' }}
+          tooltip={{ formatter: (v) => `Floor ${v}` }}
+        />
+      </Form.Item>
+
+      <Divider />
+
+      <Form.Item label="Min. Predicted Growth" name="minGrowth">
+        <InputNumber
+          min={0}
+          step={5}
+          suffix="%"
+          style={{ width: '100%' }}
         />
       </Form.Item>
 

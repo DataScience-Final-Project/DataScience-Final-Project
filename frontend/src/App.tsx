@@ -40,6 +40,8 @@ const App = () => {
       const years = filtersFormState.yearsForward?.replace('+', '') || '5';
       const [minPrice, maxPrice]: [number, number] = filtersFormState.slider ?? [0, 10_000_000];
       const [minRooms, maxRooms]: [number, number] = filtersFormState.roomsRange ?? [1, 10];
+      const [minFloors, maxFloors]: [number, number] = filtersFormState.floorsRange ?? [0, 30];
+      const minGrowth: number = filtersFormState.minGrowth ?? 0;
 
       const body: Record<string, any> = { years: Number(years) };
       if (filtersFormState.city) body.city = filtersFormState.city;
@@ -47,6 +49,9 @@ const App = () => {
       if (maxPrice < 10_000_000) body.maxPrice = maxPrice;
       if (minRooms > 1)          body.minRooms = minRooms;
       if (maxRooms < 10)         body.maxRooms = maxRooms;
+      if (minFloors > 0)         body.minFloors = minFloors;
+      if (maxFloors < 30)        body.maxFloors = maxFloors;
+      if (minGrowth > 0)         body.minGrowth = minGrowth;
 
       console.log('POST /heatmap', body);
 
@@ -118,6 +123,8 @@ const App = () => {
     slider: filtersFormState.slider,
     yearsForward: filtersFormState.yearsForward,
     roomsRange: filtersFormState.roomsRange,
+    floorsRange: filtersFormState.floorsRange,
+    minGrowth: filtersFormState.minGrowth,
   };
 
   return (

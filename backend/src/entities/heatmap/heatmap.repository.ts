@@ -11,8 +11,10 @@ export type PropertyPredictionRow = {
     houseNumber: string;
     numRooms: number;
     buildingYear: number;
+    floorNumber: number | null;
     buildingFloors: number;
     propertyType: number;
+    assetType: string | null;
     logChange: number;
     percentChange: number;
     price: number;
@@ -25,8 +27,9 @@ export type HexPropertyRow = {
     houseNumber: string;
     numRooms: number;
     buildingYear: number;
+    floorNumber: number | null;
     buildingFloors: number;
-    propertyType: string;
+    assetType: string | null;
     percentChange: number;
     price: number;
 };
@@ -38,6 +41,9 @@ export type HeatmapFilters = {
     maxPrice?: number | null;
     minRooms?: number | null;
     maxRooms?: number | null;
+    minFloors?: number | null;
+    maxFloors?: number | null;
+    minGrowth?: number | null;
     propertyType?: number | null;
 };
 
@@ -57,8 +63,10 @@ export class HeatmapRepository {
                 p.house_number        AS "houseNumber",
                 p.num_rooms           AS "numRooms",
                 p.building_year       AS "buildingYear",
+                p.floor_number        AS "floorNumber",
                 p.building_floors     AS "buildingFloors",
                 p.property_type       AS "propertyType",
+                p.asset_type          AS "assetType",
                 pp.log_change         AS "logChange",
                 pp.percent_change     AS "percentChange",
                 pp.price_at_snapshot  AS "price"
@@ -69,9 +77,12 @@ export class HeatmapRepository {
             WHERE p.lat IS NOT NULL
               AND p.lon IS NOT NULL
               AND (:city::text          IS NULL OR p.city_name             = :city)
-              AND (:minRooms::float     IS NULL OR p.num_rooms            >= :minRooms)
-              AND (:maxRooms::float     IS NULL OR p.num_rooms            <= :maxRooms)
-              AND (:propertyType::smallint IS NULL OR p.property_type     = :propertyType)
+              AND (:minRooms::float  IS NULL OR p.num_rooms    IS NULL OR p.num_rooms    >= :minRooms)
+              AND (:maxRooms::float  IS NULL OR p.num_rooms    IS NULL OR p.num_rooms    <= :maxRooms)
+              AND (:minFloors::int   IS NULL OR p.floor_number IS NULL OR p.floor_number >= :minFloors)
+              AND (:maxFloors::int   IS NULL OR p.floor_number IS NULL OR p.floor_number <= :maxFloors)
+              AND (:minGrowth::float IS NULL OR pp.percent_change >= :minGrowth)
+              AND (:propertyType::smallint IS NULL OR p.property_type = :propertyType)
               AND (:minPrice::bigint    IS NULL OR pp.price_at_snapshot   >= :minPrice)
               AND (:maxPrice::bigint    IS NULL OR pp.price_at_snapshot   <= :maxPrice)
             `,
@@ -83,6 +94,9 @@ export class HeatmapRepository {
                     maxPrice:     filters.maxPrice     ?? null,
                     minRooms:     filters.minRooms     ?? null,
                     maxRooms:     filters.maxRooms     ?? null,
+                    minFloors:    filters.minFloors    ?? null,
+                    maxFloors:    filters.maxFloors    ?? null,
+                    minGrowth:    filters.minGrowth    ?? null,
                     propertyType: filters.propertyType ?? null,
                 },
                 type: QueryTypes.SELECT,
@@ -100,8 +114,9 @@ export class HeatmapRepository {
                 p.house_number        AS "houseNumber",
                 p.num_rooms           AS "numRooms",
                 p.building_year       AS "buildingYear",
+                p.floor_number        AS "floorNumber",
                 p.building_floors     AS "buildingFloors",
-                p.property_type       AS "propertyType",
+                p.asset_type          AS "assetType",
                 pp.percent_change     AS "percentChange",
                 pp.price_at_snapshot  AS "price"
             FROM properties p

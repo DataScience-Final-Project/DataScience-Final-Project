@@ -68,7 +68,7 @@ def main():
         "property_key", "city_name", "street", "house_number",
         "lat", "lon", "geom",
         "ASSETROOMNUM", "BUILDINGYEAR", "BUILDINGFLOORS", "FLOORNO", "TYPE",
-        "DEALDATETIME", "DEALAMOUNT"
+        "DEALDATETIME", "DEALAMOUNT", "DEALNATUREDESCRIPTION"
     ]].copy().rename(columns={
         "ASSETROOMNUM": "num_rooms",
         "BUILDINGYEAR": "building_year",
@@ -78,6 +78,7 @@ def main():
         "DEALDATETIME": "sale_datetime",
         "DEALAMOUNT": "sale_price",
         "geom": "geom_ewkt",
+        "DEALNATUREDESCRIPTION": "asset_type"
     })
 
     print(f"✅ Rows to load: {len(stg):,}")
@@ -99,6 +100,7 @@ def main():
                   building_floors TEXT,
                   floor_number TEXT,
                   property_type TEXT,
+                  asset_type TEXT,
                   sale_datetime TIMESTAMP,
                   sale_price TEXT
                 ) ON COMMIT DROP;
@@ -113,7 +115,7 @@ def main():
                   property_key, city_name, street, house_number,
                   lat, lon, geom_ewkt,
                   num_rooms, building_year, building_floors, floor_number, property_type,
-                  sale_datetime, sale_price
+                  sale_datetime, sale_price, asset_type
                 )
                 FROM STDIN WITH (FORMAT csv)
             """, buf)
@@ -130,7 +132,7 @@ def main():
                 INSERT INTO properties (
                 property_key, city_name, street, house_number,
                 lat, lon, geom,
-                num_rooms, building_year, building_floors, floor_number, property_type
+                num_rooms, building_year, building_floors, floor_number, property_type, asset_type
                 )
                 SELECT DISTINCT ON (property_key)
                 property_key,
@@ -151,7 +153,8 @@ def main():
                 END,
                 CASE WHEN NULLIF(BTRIM(property_type),'') IS NULL THEN NULL
                     ELSE CAST(CAST(property_type AS NUMERIC) AS INT)
-                END
+                END,
+                NULLIF(BTRIM(asset_type),'')
                 FROM stg_sales
                 WHERE property_key IS NOT NULL AND BTRIM(property_key) <> ''
                 AND lat IS NOT NULL AND lon IS NOT NULL
@@ -167,7 +170,8 @@ def main():
                 building_year = COALESCE(EXCLUDED.building_year, properties.building_year),
                 building_floors = COALESCE(EXCLUDED.building_floors, properties.building_floors),
                 floor_number = COALESCE(EXCLUDED.floor_number, properties.floor_number),
-                property_type = COALESCE(EXCLUDED.property_type, properties.property_type);
+                property_type = COALESCE(EXCLUDED.property_type, properties.property_type),
+                asset_type = COALESCE(EXCLUDED.asset_type, properties.asset_type);
             """)
 
             # Unique index for transactions to avoid duplicates
