@@ -400,6 +400,106 @@
   padding: 2px 10px;
 }
 
+/* ——— Floating heatmap legend (overlaid at the top of the map) ——— */
+
+.heatmap-stage {
+  position: relative;
+}
+
+.heatmap-legend {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(230px, calc(100% - 28px));
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(20, 20, 30, 0.72);
+  box-shadow: 0 8px 28px rgba(8, 8, 16, 0.45), 0 0 18px rgba(125, 95, 255, 0.14);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: #e9e6ff;
+  pointer-events: none;
+}
+
+.heatmap-legend__title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #f4f4f5;
+}
+
+.heatmap-legend__bar {
+  height: 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.heatmap-legend__scale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  font-weight: 600;
+  color: #a1a1aa;
+}
+
+.heatmap-legend__levels {
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.heatmap-legend__level {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.heatmap-legend__swatch {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.35);
+}
+
+.heatmap-legend__level-label {
+  font-weight: 600;
+  color: #f4f4f5;
+}
+
+.heatmap-legend__level-range {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  color: #a1a1aa;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 560px) {
+  .heatmap-legend {
+    top: 10px;
+    left: 10px;
+    width: min(190px, calc(100% - 20px));
+    padding: 10px 12px;
+    gap: 6px;
+  }
+
+  .heatmap-legend__level {
+    font-size: 11px;
+  }
+}
+
 .heatmap-canvas {
   filter: drop-shadow(0 0 8px rgba(125, 95, 255, 0.34));
 }

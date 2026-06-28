@@ -1,5 +1,5 @@
 // src/components/HeatMap.tsx
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import maplibregl, { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -77,6 +77,55 @@ function growthFillColorExpression(stops: [number, string][]): maplibregl.Expres
   return ["interpolate-hcl", ["linear"], growth, ...stops.flat()];
 }
 
+/** Three readable buckets derived from the live color stops (low → high growth). */
+function legendLevelsFromStops(stops: [number, string][]): {
+  label: string;
+  color: string;
+  range: string;
+}[] {
+  const fmt = (v: number) => `${Math.round(v)}%`;
+  const lo = stops[0]?.[0] ?? 0;
+  const mid = stops[2]?.[0] ?? lo;
+
+  return [
+    { label: "High", color: GROWTH_COLOR_PALETTE[4], range: `≥ ${fmt(mid)}` },
+    { label: "Medium", color: GROWTH_COLOR_PALETTE[2], range: `${fmt(lo)} – ${fmt(mid)}` },
+    { label: "Low", color: GROWTH_COLOR_PALETTE[0], range: `≤ ${fmt(lo)}` },
+  ];
+}
+
+const HeatMapLegend: React.FC<{ stops: [number, string][] }> = ({ stops }) => {
+  const levels = legendLevelsFromStops(stops);
+  const gradient = `linear-gradient(90deg, ${GROWTH_COLOR_PALETTE.join(", ")})`;
+  const lo = `${Math.round(stops[0]?.[0] ?? 0)}%`;
+  const hi = `${Math.round(stops[stops.length - 1]?.[0] ?? 0)}%`;
+
+  return (
+    <div className="heatmap-legend" role="img" aria-label="Predicted growth heatmap legend">
+      <span className="heatmap-legend__title">Predicted growth</span>
+
+      <div className="heatmap-legend__bar" style={{ background: gradient }} />
+      <div className="heatmap-legend__scale">
+        <span>{lo}</span>
+        <span>{hi}</span>
+      </div>
+
+      <ul className="heatmap-legend__levels">
+        {levels.map((level) => (
+          <li key={level.label} className="heatmap-legend__level">
+            <span
+              className="heatmap-legend__swatch"
+              style={{ backgroundColor: level.color }}
+            />
+            <span className="heatmap-legend__level-label">{level.label}</span>
+            <span className="heatmap-legend__level-range">{level.range}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+};
+
 function boundsFromPolygonFeatures(features: AreaFeature[]): maplibregl.LngLatBounds | null {
   const bounds = new maplibregl.LngLatBounds();
   let hasPoint = false;
@@ -97,6 +146,7 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0, onAreaClic
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const popupRef = useRef<maplibregl.Popup | null>(null);
+  const [legendStops, setLegendStops] = useState<[number, string][]>(DEFAULT_ANNUAL_STOPS);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
@@ -235,11 +285,14 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0, onAreaClic
       const src = map?.getSource("growth-source") as GeoJSONSource | undefined;
       if (src) src.setData(geojson as any);
 
+      const stops = growthColorStops(areas);
+      setLegendStops(stops);
+
       if (map?.getLayer("growth-fill")) {
         map.setPaintProperty(
           "growth-fill",
           "fill-color",
-          growthFillColorExpression(growthColorStops(areas)),
+          growthFillColorExpression(stops),
         );
       }
     }
@@ -268,7 +321,12 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0, onAreaClic
     }
   }, [areas, fitBoundsNonce]);
 
-  return <div ref={mapContainerRef} className="heatmap-canvas" style={{ width: "100%", height: "100%" }} />;
+  return (
+    <div className="heatmap-stage" style={{ position: "relative", width: "100%", height: "100%" }}>
+      <HeatMapLegend stops={legendStops} />
+      <div ref={mapContainerRef} className="heatmap-canvas" style={{ width: "100%", height: "100%" }} />
+    </div>
+  );
 };
 
 export default HeatMap;
