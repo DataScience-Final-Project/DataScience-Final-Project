@@ -6,6 +6,7 @@ import WelcomePage from './components/WelcomePage.tsx'
 import Login from './components/Login.tsx'
 import Register from './components/Register.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary.tsx'
+import PropertyDetailsPage from './components/PropertyDetailsPage.tsx'
 
 createRoot(document.getElementById('root')!).render(
     <ErrorBoundary>
@@ -15,7 +16,8 @@ createRoot(document.getElementById('root')!).render(
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/dashboard" element={<App />} />
-            </Routes>
+                <Route path="/dashboard/properties/:propertyId" element={<PropertyDetailsPage />} />
+        </Routes>
         </BrowserRouter>
     </ErrorBoundary>,
 )

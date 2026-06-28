@@ -1,9 +1,8 @@
 // src/components/HeatMap.tsx
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import maplibregl, { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-// הסרנו את הייבוא של נתוני הדמה, משאירים רק את הקומפוננטה
 import AreaInvestmentPopup from "./AreaInvestmentPopup";
 
 /** Hebrew / Arabic labels on vector tiles need the RTL shaping plugin (lazy-loaded). */
@@ -12,19 +11,23 @@ maplibregl.setRTLTextPlugin(
   true
 );
 
-// עדכון ה-Type: פוליגון דורש מערך תלת-ממדי של מספרים
 type AreaFeature = {
   type: "Feature";
   geometry: {
     type: "Polygon";
-    coordinates: number[][][]; // מערך של טבעות קואורדינטות
+    coordinates: number[][][];
   };
   properties: {
     id?: number;
+    clusterId?: number;
+    h3Index?: string;
     name?: string;
+    neighborhoodName?: string;
     growth: number;
-    originalGrade?: number; // הוספנו את הציון המקורי ל-Type
-    suggestedAreas?: any; // הוספנו את מערך הערים
+    grade?: number;
+    horizonYears?: number;
+    originalGrade?: number;
+    suggestedAreas?: any;
     [key: string]: any;
   };
 };
@@ -33,7 +36,13 @@ type HeatMapProps = {
   areas: AreaFeature[];
   /** Increment after a search or reset so the map fits bounds to the current `areas`. */
   fitBoundsNonce?: number;
-  /** Called when the user clicks a hex polygon. Receives the raw H3 index and a display name. */
+  selectedClusterId?: number | null;
+  /** Increment whenever navigation returns to the map with a selected polygon. */
+  selectionNonce?: number;
+  isActive?: boolean;
+  onAreaSelected?: (clusterId: number, areaName: string) => void;
+  onViewProperties?: (clusterId: number, areaName: string) => void;
+  /** Called when the user clicks an H3 polygon from the /heatmap feed. */
   onAreaClick?: (h3Index: string, areaDisplayName: string) => void;
 };
 
@@ -55,7 +64,7 @@ function growthValues(features: AreaFeature[]): number[] {
     .sort((a, b) => a - b);
 }
 
-/** Spread colors across the current result set (lowest → green, highest → red). */
+/** Spread colors across the current result set (lowest -> green, highest -> red). */
 function growthColorStops(features: AreaFeature[]): [number, string][] {
   const values = growthValues(features);
   if (!values.length) return DEFAULT_ANNUAL_STOPS;
@@ -77,6 +86,55 @@ function growthFillColorExpression(stops: [number, string][]): maplibregl.Expres
   return ["interpolate-hcl", ["linear"], growth, ...stops.flat()];
 }
 
+/** Three readable buckets derived from the live color stops (low → high growth). */
+function legendLevelsFromStops(stops: [number, string][]): {
+  label: string;
+  color: string;
+  range: string;
+}[] {
+  const fmt = (v: number) => `${Math.round(v)}%`;
+  const lo = stops[0]?.[0] ?? 0;
+  const mid = stops[2]?.[0] ?? lo;
+
+  return [
+    { label: "High", color: GROWTH_COLOR_PALETTE[4], range: `≥ ${fmt(mid)}` },
+    { label: "Medium", color: GROWTH_COLOR_PALETTE[2], range: `${fmt(lo)} – ${fmt(mid)}` },
+    { label: "Low", color: GROWTH_COLOR_PALETTE[0], range: `≤ ${fmt(lo)}` },
+  ];
+}
+
+const HeatMapLegend: React.FC<{ stops: [number, string][] }> = ({ stops }) => {
+  const levels = legendLevelsFromStops(stops);
+  const gradient = `linear-gradient(90deg, ${GROWTH_COLOR_PALETTE.join(", ")})`;
+  const lo = `${Math.round(stops[0]?.[0] ?? 0)}%`;
+  const hi = `${Math.round(stops[stops.length - 1]?.[0] ?? 0)}%`;
+
+  return (
+    <div className="heatmap-legend" role="img" aria-label="Predicted growth heatmap legend">
+      <span className="heatmap-legend__title">Predicted growth</span>
+
+      <div className="heatmap-legend__bar" style={{ background: gradient }} />
+      <div className="heatmap-legend__scale">
+        <span>{lo}</span>
+        <span>{hi}</span>
+      </div>
+
+      <ul className="heatmap-legend__levels">
+        {levels.map((level) => (
+          <li key={level.label} className="heatmap-legend__level">
+            <span
+              className="heatmap-legend__swatch"
+              style={{ backgroundColor: level.color }}
+            />
+            <span className="heatmap-legend__level-label">{level.label}</span>
+            <span className="heatmap-legend__level-range">{level.range}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+};
+
 function boundsFromPolygonFeatures(features: AreaFeature[]): maplibregl.LngLatBounds | null {
   const bounds = new maplibregl.LngLatBounds();
   let hasPoint = false;
@@ -93,10 +151,89 @@ function boundsFromPolygonFeatures(features: AreaFeature[]): maplibregl.LngLatBo
   return hasPoint ? bounds : null;
 }
 
-const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0, onAreaClick }) => {
+function selectedAreaFeature(areas: AreaFeature[], selectedClusterId: number | null) {
+  if (!selectedClusterId) return null;
+  return areas.find((area) => Number(area.properties.clusterId ?? area.properties.id) === selectedClusterId) ?? null;
+}
+
+function setMapData(map: MapLibreMap, areas: AreaFeature[], selectedClusterId: number | null) {
+  const source = map.getSource("growth-source") as GeoJSONSource | undefined;
+  if (source) {
+    source.setData({
+      type: "FeatureCollection",
+      features: areas,
+    } as any);
+  }
+
+  const selectedSource = map.getSource("growth-selected-source") as GeoJSONSource | undefined;
+  if (selectedSource) {
+    const selectedArea = selectedAreaFeature(areas, selectedClusterId);
+    selectedSource.setData({
+      type: "FeatureCollection",
+      features: selectedArea ? [selectedArea] : [],
+    } as any);
+  }
+
+  if (map.getLayer("growth-fill")) {
+    map.setPaintProperty(
+      "growth-fill",
+      "fill-color",
+      growthFillColorExpression(growthColorStops(areas)),
+    );
+  }
+}
+
+function fitAllAreas(map: MapLibreMap, areas: AreaFeature[]) {
+  const bounds = boundsFromPolygonFeatures(areas);
+  if (!bounds) return;
+
+  map.resize();
+  map.fitBounds(bounds, { padding: 48, maxZoom: 14, duration: 600 });
+}
+
+function parseSuggestedAreas(value: unknown) {
+  if (Array.isArray(value)) return value.filter((item): item is string => typeof item === "string");
+  if (typeof value !== "string") return [];
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
+  } catch (error) {
+    console.error("Failed to parse suggestedAreas", error);
+    return [];
+  }
+}
+
+const HeatMap: React.FC<HeatMapProps> = ({
+  areas,
+  fitBoundsNonce = 0,
+  selectedClusterId = null,
+  selectionNonce = 0,
+  isActive = true,
+  onAreaSelected,
+  onViewProperties,
+  onAreaClick,
+}) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const popupRef = useRef<maplibregl.Popup | null>(null);
+  const [legendStops, setLegendStops] = useState<[number, string][]>(DEFAULT_ANNUAL_STOPS);
+  const onAreaSelectedRef = useRef(onAreaSelected);
+  const onViewPropertiesRef = useRef(onViewProperties);
+  const onAreaClickRef = useRef(onAreaClick);
+  const areasRef = useRef(areas);
+  const selectedClusterIdRef = useRef(selectedClusterId);
+
+  useEffect(() => {
+    onAreaSelectedRef.current = onAreaSelected;
+    onViewPropertiesRef.current = onViewProperties;
+    onAreaClickRef.current = onAreaClick;
+  }, [onAreaSelected, onViewProperties, onAreaClick]);
+
+  useEffect(() => {
+    areasRef.current = areas;
+    selectedClusterIdRef.current = selectedClusterId;
+  }, [areas, selectedClusterId]);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
@@ -119,10 +256,9 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0, onAreaClic
         },
       });
 
-      // 1. שכבת המילוי (הצבע ה"חם")
       map.addLayer({
         id: "growth-fill",
-        type: "fill", // שינוי מ-heatmap ל-fill
+        type: "fill",
         source: "growth-source",
         paint: {
           "fill-color": growthFillColorExpression(DEFAULT_ANNUAL_STOPS),
@@ -130,7 +266,14 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0, onAreaClic
         },
       });
 
-      // 2. שכבת קווי מתאר (כדי שהאזורים יהיו מובחנים)
+      map.addSource("growth-selected-source", {
+        type: "geojson",
+        data: {
+          type: "FeatureCollection",
+          features: [],
+        },
+      });
+
       map.addLayer({
         id: "growth-outline",
         type: "line",
@@ -138,9 +281,25 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0, onAreaClic
         paint: {
           "line-color": "#ffffff",
           "line-width": 1,
-          "line-opacity": 0.75
-        }
+          "line-opacity": 0.75,
+        },
       });
+
+      map.addLayer({
+        id: "growth-selected-outline",
+        type: "line",
+        source: "growth-selected-source",
+        paint: {
+          "line-color": "#c4b5fd",
+          "line-width": 4,
+          "line-opacity": 1,
+        },
+      });
+
+      setMapData(map, areasRef.current, selectedClusterIdRef.current);
+      if (selectedClusterIdRef.current) {
+        requestAnimationFrame(() => fitAllAreas(map, areasRef.current));
+      }
 
       map.on("mouseenter", "growth-fill", () => {
         map.getCanvas().style.cursor = "pointer";
@@ -154,42 +313,35 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0, onAreaClic
         const selectedFeature = event.features?.[0];
         if (!selectedFeature) return;
 
-        const properties = selectedFeature.properties as any;
-
+        const properties = selectedFeature.properties as AreaFeature["properties"];
         const areaName = properties.name || properties.neighborhoodName || "Selected area";
-        const h3Index: string | null = properties.h3Index ?? null;
+        const clusterId = Number(properties.clusterId ?? properties.id);
+        const h3Index = typeof properties.h3Index === "string" ? properties.h3Index : null;
+        const gradeValue = properties.originalGrade !== undefined
+          ? Number(properties.originalGrade)
+          : Number(properties.grade ?? properties.growth ?? 0);
+        const horizonYears = Number(properties.horizonYears ?? 5);
+        const suggestedAreas = parseSuggestedAreas(properties.suggestedAreas);
 
-        if (h3Index && onAreaClick) {
-          onAreaClick(h3Index, areaName);
+        if (Number.isFinite(clusterId)) {
+          onAreaSelectedRef.current?.(clusterId, areaName);
         }
-        
-        // Use grade (total % over horizon) so it matches the per-property percentChange values
-        const gradeValue = Number(properties.grade ?? properties.growth ?? 0);
-        const horizonYears: number = Number(properties.horizonYears ?? 5);
-
-        // --- הפיכת הערים ממחרוזת של MapLibre למערך אמיתי ---
-        let parsedCities: string[] = [];
-        try {
-          if (typeof properties.suggestedAreas === "string") {
-            parsedCities = JSON.parse(properties.suggestedAreas);
-          } else if (Array.isArray(properties.suggestedAreas)) {
-            parsedCities = properties.suggestedAreas;
-          }
-        } catch (e) {
-          console.error("Failed to parse suggestedAreas", e);
-          parsedCities = [];
-        }
-        // ----------------------------------------------------
 
         const popupContainer = document.createElement("div");
         const popupRoot = createRoot(popupContainer);
+        const handleViewProperties = h3Index && onAreaClickRef.current
+          ? () => onAreaClickRef.current?.(h3Index, areaName)
+          : Number.isFinite(clusterId)
+            ? () => onViewPropertiesRef.current?.(clusterId, areaName)
+            : undefined;
 
         popupRoot.render(
           <AreaInvestmentPopup
             areaName={areaName}
             growthPercent={gradeValue}
             horizonYears={horizonYears}
-            suggestedAreas={parsedCities}
+            suggestedAreas={suggestedAreas}
+            onViewProperties={handleViewProperties}
           />
         );
 
@@ -221,12 +373,12 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0, onAreaClic
     };
   }, []);
 
-  // עדכון הנתונים כשה-areas משתנים
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
     function update() {
+      setMapData(map!, areas, selectedClusterId);
       const geojson = {
         type: "FeatureCollection",
         features: areas,
@@ -235,11 +387,14 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0, onAreaClic
       const src = map?.getSource("growth-source") as GeoJSONSource | undefined;
       if (src) src.setData(geojson as any);
 
+      const stops = growthColorStops(areas);
+      setLegendStops(stops);
+
       if (map?.getLayer("growth-fill")) {
         map.setPaintProperty(
           "growth-fill",
           "fill-color",
-          growthFillColorExpression(growthColorStops(areas)),
+          growthFillColorExpression(stops),
         );
       }
     }
@@ -249,16 +404,29 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0, onAreaClic
     } else {
       map.once("load", update);
     }
-  }, [areas]);
+  }, [areas, selectedClusterId]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isActive || !selectedClusterId) return;
+    const selectedArea = selectedAreaFeature(areas, selectedClusterId);
+    if (!selectedArea) return;
+
+    const fit = () => {
+      setMapData(map, areas, selectedClusterId);
+      fitAllAreas(map, areas);
+    };
+
+    if (map.isStyleLoaded()) requestAnimationFrame(fit);
+    else map.once("load", fit);
+  }, [areas, isActive, selectedClusterId, selectionNonce]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map || fitBoundsNonce === 0 || !areas.length) return;
 
     function fit() {
-      const b = boundsFromPolygonFeatures(areas);
-      if (!b || !map) return;
-      map.fitBounds(b, { padding: 48, maxZoom: 14, duration: 600 });
+      fitAllAreas(map!, areas);
     }
 
     if (map.isStyleLoaded()) {
@@ -268,7 +436,12 @@ const HeatMap: React.FC<HeatMapProps> = ({ areas, fitBoundsNonce = 0, onAreaClic
     }
   }, [areas, fitBoundsNonce]);
 
-  return <div ref={mapContainerRef} className="heatmap-canvas" style={{ width: "100%", height: "100%" }} />;
+  return (
+    <div className="heatmap-stage" style={{ position: "relative", width: "100%", height: "100%" }}>
+      <HeatMapLegend stops={legendStops} />
+      <div ref={mapContainerRef} className="heatmap-canvas" style={{ width: "100%", height: "100%" }} />
+    </div>
+  );
 };
 
 export default HeatMap;

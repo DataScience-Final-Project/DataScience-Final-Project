@@ -13,11 +13,11 @@ const SignUp = () => {
   const onFinish = async (values: LoginPayload) => {
     setSubmitting(true);
     try {
-      // const { user } = await login({
-      //   identifier: values.identifier.trim(),
-      //   password: values.password,
-      // });
-      //message.success(`Welcome back, ${user.firstName}!`);
+      const { user } = await login({
+        identifier: values.identifier.trim(),
+        password: values.password,
+      });
+      message.success(`Welcome back, ${user.firstName}!`);
       navigate('/dashboard');
     } catch (error) {
       message.error(error instanceof Error ? error.message : 'Login failed');
