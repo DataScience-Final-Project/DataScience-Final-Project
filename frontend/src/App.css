@@ -360,6 +360,49 @@
   color: #fb7185 !important;
 }
 
+/* ——— POI filter rows (dark glass context) ——— */
+
+/* POI distance InputNumber */
+.dashboard-card--filters .ant-input-number {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+.dashboard-card--filters .ant-input-number input {
+  color: #ffffff !important;
+}
+.dashboard-card--filters .ant-input-number .ant-input-number-suffix {
+  color: #a1a1aa !important;
+}
+.dashboard-card--filters .ant-input-number:hover,
+.dashboard-card--filters .ant-input-number-focused {
+  border-color: rgba(255, 255, 255, 0.38) !important;
+}
+
+/* POI "Add POI filter" select */
+.dashboard-card--filters .ant-select:not(.city-area-select) .ant-select-selector {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #a1a1aa !important;
+}
+.dashboard-card--filters .ant-select:not(.city-area-select) .ant-select-selection-placeholder {
+  color: #a1a1aa !important;
+}
+.dashboard-card--filters .ant-select:not(.city-area-select) .ant-select-arrow {
+  color: #a1a1aa !important;
+}
+.dashboard-card--filters .ant-select:not(.city-area-select):hover .ant-select-selector,
+.dashboard-card--filters .ant-select:not(.city-area-select).ant-select-focused .ant-select-selector {
+  border-color: rgba(255, 255, 255, 0.38) !important;
+}
+
+/* POI remove (X) button */
+.dashboard-card--filters .ant-btn-text .anticon {
+  color: #a1a1aa !important;
+}
+.dashboard-card--filters .ant-btn-text:hover .anticon {
+  color: #ffffff !important;
+}
+
 /* ——— Properties list ——— */
 
 .dashboard-card--properties.ant-card {

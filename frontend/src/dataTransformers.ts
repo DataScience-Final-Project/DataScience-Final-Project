@@ -13,4 +13,6 @@ export const normalizeServerData = (serverData: any, yearsForward: string | numb
       },
     }));
   }
+
+  return [];
 };

@@ -3,6 +3,44 @@
   width: 100%;
 }
 
+/* POI distance filter rows */
+.poiRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.poiName {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: #e4e4e7;
+  text-transform: capitalize;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.poiDistance {
+  width: 100px;
+  flex-shrink: 0;
+}
+
+.poiRemoveBtn {
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.poiRemoveBtn:hover {
+  opacity: 1;
+}
+
+.poiAddPlaceholder {
+  display: flex;
+  align-items: center;
+}
+
 /* Submit: neon gradient in dark theme */
 .submitButton:global(.ant-btn) {
   min-width: 180px;

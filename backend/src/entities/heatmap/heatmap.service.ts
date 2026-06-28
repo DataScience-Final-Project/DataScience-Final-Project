@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { latLngToCell, cellToBoundary } from "h3-js";
-import { HeatmapRepository, HeatmapFilters, PropertyPredictionRow } from "./heatmap.repository";
+import { HeatmapRepository, HeatmapFilters, PropertyPredictionRow, PoiFilter } from "./heatmap.repository";
 
 export class HeatmapFiltersDto {
     years!: number;
@@ -13,6 +13,7 @@ export class HeatmapFiltersDto {
     maxFloors?: number;
     minGrowth?: number;
     propertyType?: number;
+    poiFilters?: PoiFilter[];
 }
 
 const RESOLUTION = 8;
@@ -33,6 +34,7 @@ export class HeatmapService {
             maxFloors:    dto.maxFloors    != null ? Number(dto.maxFloors) : null,
             minGrowth:    dto.minGrowth    != null ? Number(dto.minGrowth)  : null,
             propertyType: dto.propertyType != null ? Number(dto.propertyType) : null,
+            poiFilters:   dto.poiFilters   ?? null,
         };
 
         const rows = await this.repository.fetchFiltered(filters);
@@ -83,10 +85,24 @@ export class HeatmapService {
         return { type: "FeatureCollection", features };
     }
 
-    async getHexProperties(hexId: string, years: number) {
+    async getHexProperties(hexId: string, years: number, filters?: Partial<HeatmapFiltersDto>) {
         const horizonYears: 5 | 10 = years > 5 ? 10 : 5;
         const wkt = this.hexToWkt(hexId);
-        return this.repository.fetchByHex(wkt, horizonYears);
+        const resolvedFilters = filters ? {
+            horizonYears,
+            city:      filters.city      ?? null,
+            minPrice:  filters.minPrice  != null ? Number(filters.minPrice)  : null,
+            maxPrice:  filters.maxPrice  != null ? Number(filters.maxPrice)  : null,
+            minRooms:  filters.minRooms  != null ? Number(filters.minRooms)  : null,
+            maxRooms:  filters.maxRooms  != null ? Number(filters.maxRooms)  : null,
+            minFloors: filters.minFloors != null ? Number(filters.minFloors) : null,
+            maxFloors: filters.maxFloors != null ? Number(filters.maxFloors) : null,
+        } : undefined;
+        return this.repository.fetchByHex(wkt, horizonYears, resolvedFilters);
+    }
+
+    getPoiTypes() {
+        return this.repository.fetchPoiTypes();
     }
 
     private hexToWkt(hexId: string): string {

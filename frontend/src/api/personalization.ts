@@ -4,6 +4,12 @@
 
 const API_BASE_URL = 'http://localhost:4000';
 
+export type PoiFilterEntry = {
+  poiTypeId: number;
+  name: string;
+  maxDistanceMeters: number;
+};
+
 export type SearchFilters = {
   city?: string;
   slider?: [number, number];
@@ -11,6 +17,7 @@ export type SearchFilters = {
   roomsRange?: [number, number];
   floorsRange?: [number, number];
   minGrowth?: number;
+  poiFilters?: PoiFilterEntry[];
 };
 
 export type SavedSearch = {

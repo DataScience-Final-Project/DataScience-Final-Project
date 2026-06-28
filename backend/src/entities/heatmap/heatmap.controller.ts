@@ -5,13 +5,18 @@ import { HeatmapService, HeatmapFiltersDto } from "./heatmap.service";
 export class HeatmapController {
     constructor(private readonly service: HeatmapService) { }
 
+    @Get('poi-types')
+    getPoiTypes() {
+        return this.service.getPoiTypes();
+    }
+
     @Post('')
     getHeatmap(@Body() filters: HeatmapFiltersDto) {
         return this.service.getHeatmap(filters);
     }
 
-    @Get(':hexId/properties')
-    getHexProperties(@Param('hexId') hexId: string, @Query('years') years: string) {
-        return this.service.getHexProperties(hexId, Number(years) || 5);
+    @Post(':hexId/properties')
+    getHexProperties(@Param('hexId') hexId: string, @Body() body: { years?: number } & Partial<HeatmapFiltersDto>) {
+        return this.service.getHexProperties(hexId, Number(body.years) || 5, body);
     }
 }

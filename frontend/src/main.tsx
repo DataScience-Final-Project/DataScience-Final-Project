@@ -5,14 +5,17 @@ import App from './App.tsx'
 import WelcomePage from './components/WelcomePage.tsx'
 import Login from './components/Login.tsx'
 import Register from './components/Register.tsx'
+import { ErrorBoundary } from './components/ErrorBoundary.tsx'
 
 createRoot(document.getElementById('root')!).render(
-    <BrowserRouter>
-        <Routes>
-            <Route path="/" element={<WelcomePage />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/dashboard" element={<App />} />
-        </Routes>
-    </BrowserRouter>,
+    <ErrorBoundary>
+        <BrowserRouter>
+            <Routes>
+                <Route path="/" element={<WelcomePage />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/dashboard" element={<App />} />
+            </Routes>
+        </BrowserRouter>
+    </ErrorBoundary>,
 )

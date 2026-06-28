@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Divider, Form, InputNumber, Segmented, Slider, Select, message } from 'antd';
+import { PlusOutlined, CloseOutlined } from '@ant-design/icons';
 import styles from './FiltersForm.module.css';
+import type { PoiFilterEntry } from '../api/personalization';
 
-// הסרנו את onAreaSearch כי עכשיו החיפוש הוא חלק מהטופס ונשלח ב-onFinish
+type PoiType = { poiTypeId: number; name: string };
+
 type FiltersFormProps = {
   onFinish: (values: any) => void;
-  // ערכים שנדחפים לטופס כשמחילים חיפוש שמור (Saved Search)
   appliedValues?: any;
 }
 
@@ -23,18 +25,29 @@ const priceRangeMarks = {
 const FiltersForm: React.FC<FiltersFormProps> = ({ onFinish, appliedValues }) => {
   const [form] = Form.useForm();
 
-  // כשמחילים חיפוש שמור, מסנכרנים את שדות הטופס לערכים השמורים
+  const [poiFilters, setPoiFilters] = useState<PoiFilterEntry[]>([]);
+  const [allPoiTypes, setAllPoiTypes] = useState<PoiType[]>([]);
+  const [poiSelectValue, setPoiSelectValue] = useState<number | undefined>(undefined);
+
+  // Sync saved search values back into form + POI state
   useEffect(() => {
     if (appliedValues) {
       form.setFieldsValue(appliedValues);
+      setPoiFilters(appliedValues.poiFilters ?? []);
     }
   }, [appliedValues, form]);
-  
-  // States עבור חיפוש הערים
+
+  // Fetch available POI types from backend
+  useEffect(() => {
+    fetch('http://localhost:4000/heatmap/poi-types')
+      .then((r) => r.json())
+      .then((data: unknown) => { if (Array.isArray(data)) setAllPoiTypes(data as PoiType[]); })
+      .catch(() => {/* silently ignore — POI section just stays empty */});
+  }, []);
+
   const [citiesList, setCitiesList] = useState<{label: string, value: string}[]>([]);
   const [loadingCities, setLoadingCities] = useState(true);
 
-  // משיכת הערים מה-API של gov.il כשהקומפוננטה עולה
   useEffect(() => {
     const fetchIsraelCities = async () => {
       try {
@@ -42,7 +55,7 @@ const FiltersForm: React.FC<FiltersFormProps> = ({ onFinish, appliedValues }) =>
           'https://data.gov.il/api/3/action/datastore_search?resource_id=5c78e9fa-c2e2-4771-93ff-7f400a12f7ba&limit=1500'
         );
         const data = await response.json();
-        
+
         const records = data.result.records;
 
         const formattedCities = records
@@ -50,12 +63,11 @@ const FiltersForm: React.FC<FiltersFormProps> = ({ onFinish, appliedValues }) =>
             const cityName = record['שם_ישוב'].trim();
             return {
               label: cityName,
-              value: cityName, // ה-value שיישלח לשרת שלכם
+              value: cityName,
             };
           })
           .filter((city: any) => city.label !== 'לא רשום');
 
-        // מיון אלפביתי של הערים שיהיה נוח
         formattedCities.sort((a: any, b: any) => a.label.localeCompare(b.label, 'he'));
 
         setCitiesList(formattedCities);
@@ -70,15 +82,42 @@ const FiltersForm: React.FC<FiltersFormProps> = ({ onFinish, appliedValues }) =>
     fetchIsraelCities();
   }, []);
 
+  const addPoiFilter = (poiTypeId: number) => {
+    const type = allPoiTypes.find((t) => t.poiTypeId === poiTypeId);
+    if (!type) return;
+    setPoiFilters((prev) => [
+      ...prev,
+      { poiTypeId, name: type.name, maxDistanceMeters: 500 },
+    ]);
+    setPoiSelectValue(undefined);
+  };
+
+  const removePoiFilter = (poiTypeId: number) => {
+    setPoiFilters((prev) => prev.filter((f) => f.poiTypeId !== poiTypeId));
+  };
+
+  const updatePoiDistance = (poiTypeId: number, maxDistanceMeters: number) => {
+    setPoiFilters((prev) =>
+      prev.map((f) => f.poiTypeId === poiTypeId ? { ...f, maxDistanceMeters } : f)
+    );
+  };
+
+  const availablePoiOptions = allPoiTypes
+    .filter((t) => !poiFilters.some((f) => f.poiTypeId === t.poiTypeId))
+    .map((t) => ({ label: t.name, value: t.poiTypeId }));
+
+  const handleFinish = (values: any) => {
+    onFinish({ ...values, poiFilters });
+  };
+
   return (
     <Form
       form={form}
       layout="vertical"
-      onFinish={onFinish}
+      onFinish={handleFinish}
       className={styles.form}
       initialValues={{ yearsForward: '5', roomsRange: [1, 10], floorsRange: [0, 30], slider: [0, 10000000], minGrowth: 0 }}
     >
-      {/* שורת חיפוש העיר */}
       <Form.Item name="city" label="City">
         <Select
           className="city-area-select"
@@ -88,7 +127,6 @@ const FiltersForm: React.FC<FiltersFormProps> = ({ onFinish, appliedValues }) =>
           loading={loadingCities}
           placeholder="Search for a city..."
           optionFilterProp="label"
-          // מאפשר חיפוש תקין גם באמצע המילה
           filterOption={(input, option) =>
             (option?.label ?? '').includes(input)
           }
@@ -159,13 +197,56 @@ const FiltersForm: React.FC<FiltersFormProps> = ({ onFinish, appliedValues }) =>
 
       <Divider />
 
+      {/* POI Distance Filters */}
+      <Form.Item label="Nearby POIs">
+        <div>
+          {poiFilters.map((f) => (
+            <div key={f.poiTypeId} className={styles.poiRow}>
+              <span className={styles.poiName}>{f.name}</span>
+              <InputNumber
+                className={styles.poiDistance}
+                min={50}
+                max={50000}
+                step={100}
+                value={f.maxDistanceMeters}
+                suffix="m"
+                onChange={(val) => updatePoiDistance(f.poiTypeId, val ?? 500)}
+              />
+              <Button
+                type="text"
+                size="small"
+                icon={<CloseOutlined />}
+                className={styles.poiRemoveBtn}
+                onClick={() => removePoiFilter(f.poiTypeId)}
+              />
+            </div>
+          ))}
+
+          <Select
+            value={poiSelectValue}
+            placeholder={
+              <span className={styles.poiAddPlaceholder}>
+                <PlusOutlined style={{ marginRight: 6 }} />
+                Add POI filter
+              </span>
+            }
+            options={availablePoiOptions}
+            onChange={(val) => addPoiFilter(Number(val))}
+            disabled={availablePoiOptions.length === 0 && allPoiTypes.length > 0}
+            style={{ width: '100%', marginTop: poiFilters.length > 0 ? 8 : 0 }}
+            popupMatchSelectWidth={false}
+          />
+        </div>
+      </Form.Item>
+
+      <Divider />
+
       <Form.Item>
-        {/* שיניתי טיפה את העיצוב לכפתור בולט יותר כדי שיהיה ברור שזה כפתור חיפוש/שמירה */}
         <Button type="primary" htmlType="submit" className={styles.submitButton} style={{ width: '100%' }}>
           Submit
         </Button>
       </Form.Item>
-      
+
     </Form>
   );
 };

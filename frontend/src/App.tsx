@@ -15,6 +15,7 @@ import type { SearchFilters } from './api/personalization';
 import { getCurrentUser, clearCurrentUser } from './api/auth';
 
 const App = () => {
+  console.log('[App] rendering');
   const navigate = useNavigate();
   const currentUser = getCurrentUser();
 
@@ -52,6 +53,12 @@ const App = () => {
       if (minFloors > 0)         body.minFloors = minFloors;
       if (maxFloors < 30)        body.maxFloors = maxFloors;
       if (minGrowth > 0)         body.minGrowth = minGrowth;
+      if (filtersFormState.poiFilters?.length) {
+        body.poiFilters = filtersFormState.poiFilters.map((f: any) => ({
+          poiTypeId: f.poiTypeId,
+          maxDistanceMeters: f.maxDistanceMeters,
+        }));
+      }
 
       console.log('POST /heatmap', body);
 
@@ -73,7 +80,7 @@ const App = () => {
         }
 
         const normalizedData = normalizeServerData(resAsJson, years);
-        setMapAreas(normalizedData);
+        setMapAreas(normalizedData ?? []);
         if (!isInitialFetchRef.current) setMapFitNonce((n) => n + 1);
 
       } catch (error) {
@@ -91,12 +98,36 @@ const App = () => {
     if (!selectedArea) return;
     setPropertiesLoading(true);
     const years = filtersFormState.yearsForward?.replace('+', '') || '5';
-    fetch(`http://localhost:4000/heatmap/${selectedArea.h3Index}/properties?years=${years}`)
+    const [minPrice, maxPrice]: [number, number] = filtersFormState.slider ?? [0, 10_000_000];
+    const [minRooms, maxRooms]: [number, number] = filtersFormState.roomsRange ?? [1, 10];
+    const [minFloors, maxFloors]: [number, number] = filtersFormState.floorsRange ?? [0, 30];
+    const hexBody: Record<string, any> = { years: Number(years) };
+    if (filtersFormState.city)  hexBody.city = filtersFormState.city;
+    if (minPrice > 0)           hexBody.minPrice = minPrice;
+    if (maxPrice < 10_000_000)  hexBody.maxPrice = maxPrice;
+    if (minRooms > 1)           hexBody.minRooms = minRooms;
+    if (maxRooms < 10)          hexBody.maxRooms = maxRooms;
+    if (minFloors > 0)          hexBody.minFloors = minFloors;
+    if (maxFloors < 30)         hexBody.maxFloors = maxFloors;
+
+    fetch(`http://localhost:4000/heatmap/${selectedArea.h3Index}/properties`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(hexBody),
+    })
       .then((r) => r.json())
-      .then((data) => setAreaProperties(data))
+      .then((data) => {
+        console.log('[hexProperties] response:', data);
+        if (Array.isArray(data)) {
+          setAreaProperties(data);
+        } else {
+          console.error('[hexProperties] expected array, got:', data);
+          setAreaProperties([]);
+        }
+      })
       .catch(() => message.error('Failed to load properties for this area.'))
       .finally(() => setPropertiesLoading(false));
-  }, [selectedArea, filtersFormState.yearsForward]);
+  }, [selectedArea, filtersFormState]);
 
   const handleAreaClick = (h3Index: string, displayName: string) => {
     setSelectedArea({ h3Index, displayName });
@@ -125,6 +156,7 @@ const App = () => {
     roomsRange: filtersFormState.roomsRange,
     floorsRange: filtersFormState.floorsRange,
     minGrowth: filtersFormState.minGrowth,
+    poiFilters: filtersFormState.poiFilters,
   };
 
   return (

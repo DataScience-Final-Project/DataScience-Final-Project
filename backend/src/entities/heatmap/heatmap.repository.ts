@@ -34,6 +34,16 @@ export type HexPropertyRow = {
     price: number;
 };
 
+export type PoiFilter = {
+    poiTypeId: number;
+    maxDistanceMeters: number;
+};
+
+export type PoiType = {
+    poiTypeId: number;
+    name: string;
+};
+
 export type HeatmapFilters = {
     horizonYears: 5 | 10;
     city?: string | null;
@@ -45,6 +55,7 @@ export type HeatmapFilters = {
     maxFloors?: number | null;
     minGrowth?: number | null;
     propertyType?: number | null;
+    poiFilters?: PoiFilter[] | null;
 };
 
 @Injectable()
@@ -52,8 +63,33 @@ export class HeatmapRepository {
     constructor(private readonly sequelize: Sequelize) { }
 
     fetchFiltered(filters: HeatmapFilters): Promise<PropertyPredictionRow[]> {
-        return this.sequelize.query<PropertyPredictionRow>(
-            `
+        const replacements: Record<string, any> = {
+            horizonYears: filters.horizonYears,
+            city:         filters.city         ?? null,
+            minPrice:     filters.minPrice     ?? null,
+            maxPrice:     filters.maxPrice     ?? null,
+            minRooms:     filters.minRooms     ?? null,
+            maxRooms:     filters.maxRooms     ?? null,
+            minFloors:    filters.minFloors    ?? null,
+            maxFloors:    filters.maxFloors    ?? null,
+            minGrowth:    filters.minGrowth    ?? null,
+            propertyType: filters.propertyType ?? null,
+        };
+
+        // Build dynamic POI distance clauses (one EXISTS subquery per filter)
+        const poiClauses = (filters.poiFilters ?? []).map((f, i) => {
+            replacements[`poiTypeId${i}`] = f.poiTypeId;
+            replacements[`poiDist${i}`]   = f.maxDistanceMeters;
+            return `
+              AND p.geom IS NOT NULL
+              AND EXISTS (
+                  SELECT 1 FROM poi_current poc${i}
+                  WHERE poc${i}.poi_type_id = :poiTypeId${i}
+                    AND ST_DWithin(p.geom::geography, poc${i}.geom::geography, :poiDist${i})
+              )`;
+        });
+
+        const sql = `
             SELECT
                 p.property_id         AS "propertyId",
                 p.lat,
@@ -85,26 +121,28 @@ export class HeatmapRepository {
               AND (:propertyType::smallint IS NULL OR p.property_type = :propertyType)
               AND (:minPrice::bigint    IS NULL OR pp.price_at_snapshot   >= :minPrice)
               AND (:maxPrice::bigint    IS NULL OR pp.price_at_snapshot   <= :maxPrice)
-            `,
-            {
-                replacements: {
-                    horizonYears: filters.horizonYears,
-                    city:         filters.city         ?? null,
-                    minPrice:     filters.minPrice     ?? null,
-                    maxPrice:     filters.maxPrice     ?? null,
-                    minRooms:     filters.minRooms     ?? null,
-                    maxRooms:     filters.maxRooms     ?? null,
-                    minFloors:    filters.minFloors    ?? null,
-                    maxFloors:    filters.maxFloors    ?? null,
-                    minGrowth:    filters.minGrowth    ?? null,
-                    propertyType: filters.propertyType ?? null,
-                },
-                type: QueryTypes.SELECT,
-            },
-        );
+              ${poiClauses.join('')}
+            `;
+
+        return this.sequelize.query<PropertyPredictionRow>(sql, {
+            replacements,
+            type: QueryTypes.SELECT,
+        });
     }
 
-    fetchByHex(hexPolygonWkt: string, horizonYears: 5 | 10): Promise<HexPropertyRow[]> {
+    fetchByHex(hexPolygonWkt: string, horizonYears: 5 | 10, filters?: Partial<HeatmapFilters>): Promise<HexPropertyRow[]> {
+        const replacements: Record<string, any> = {
+            wkt: hexPolygonWkt,
+            horizonYears,
+            city:      filters?.city      ?? null,
+            minPrice:  filters?.minPrice  ?? null,
+            maxPrice:  filters?.maxPrice  ?? null,
+            minRooms:  filters?.minRooms  ?? null,
+            maxRooms:  filters?.maxRooms  ?? null,
+            minFloors: filters?.minFloors ?? null,
+            maxFloors: filters?.maxFloors ?? null,
+        };
+
         return this.sequelize.query<HexPropertyRow>(
             `
             SELECT DISTINCT ON (p.property_id)
@@ -125,12 +163,26 @@ export class HeatmapRepository {
                AND pp.horizon_years = :horizonYears
             WHERE p.geom IS NOT NULL
               AND ST_Within(p.geom, ST_GeomFromText(:wkt, 4326))
+              AND (:city::text       IS NULL OR p.city_name             = :city)
+              AND (:minRooms::float  IS NULL OR p.num_rooms             >= :minRooms)
+              AND (:maxRooms::float  IS NULL OR p.num_rooms             <= :maxRooms)
+              AND (:minFloors::int   IS NULL OR p.floor_number          >= :minFloors)
+              AND (:maxFloors::int   IS NULL OR p.floor_number          <= :maxFloors)
+              AND (:minPrice::bigint IS NULL OR pp.price_at_snapshot    >= :minPrice)
+              AND (:maxPrice::bigint IS NULL OR pp.price_at_snapshot    <= :maxPrice)
             ORDER BY p.property_id
             `,
             {
-                replacements: { wkt: hexPolygonWkt, horizonYears },
+                replacements,
                 type: QueryTypes.SELECT,
             },
+        );
+    }
+
+    fetchPoiTypes(): Promise<PoiType[]> {
+        return this.sequelize.query<PoiType>(
+            `SELECT poi_type_id AS "poiTypeId", poi_type_name AS "name" FROM poi_types ORDER BY poi_type_name`,
+            { type: QueryTypes.SELECT },
         );
     }
 }
