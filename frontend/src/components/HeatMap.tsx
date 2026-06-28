@@ -59,7 +59,10 @@ const DEFAULT_ANNUAL_STOPS: [number, string][] = [
 
 function growthValues(features: AreaFeature[]): number[] {
   return features
-    .map((f) => Number(f.properties.growth))
+    .map((f) => {
+      const p = f.properties;
+      return Number(p.originalGrade !== undefined ? p.originalGrade : (p.grade ?? p.growth ?? 0));
+    })
     .filter((v) => Number.isFinite(v))
     .sort((a, b) => a - b);
 }
@@ -82,8 +85,8 @@ function growthColorStops(features: AreaFeature[]): [number, string][] {
 }
 
 function growthFillColorExpression(stops: [number, string][]): maplibregl.ExpressionSpecification {
-  const growth: maplibregl.ExpressionSpecification = ["to-number", ["get", "growth"]];
-  return ["interpolate-hcl", ["linear"], growth, ...stops.flat()];
+  const value: maplibregl.ExpressionSpecification = ["to-number", ["coalesce", ["get", "grade"], ["get", "originalGrade"], ["get", "growth"], 0]];
+  return ["interpolate-hcl", ["linear"], value, ...stops.flat()];
 }
 
 /** Three readable buckets derived from the live color stops (low → high growth). */
@@ -93,21 +96,23 @@ function legendLevelsFromStops(stops: [number, string][]): {
   range: string;
 }[] {
   const fmt = (v: number) => `${Math.round(v)}%`;
-  const lo = stops[0]?.[0] ?? 0;
-  const mid = stops[2]?.[0] ?? lo;
+  const lo = stops[1]?.[0] ?? stops[0]?.[0] ?? 0;   // 25th percentile
+  const hi = stops[3]?.[0] ?? stops[stops.length - 1]?.[0] ?? lo;  // 75th percentile
 
   return [
-    { label: "High", color: GROWTH_COLOR_PALETTE[4], range: `≥ ${fmt(mid)}` },
-    { label: "Medium", color: GROWTH_COLOR_PALETTE[2], range: `${fmt(lo)} – ${fmt(mid)}` },
+    { label: "High", color: GROWTH_COLOR_PALETTE[4], range: `≥ ${fmt(hi)}` },
+    { label: "Medium", color: GROWTH_COLOR_PALETTE[2], range: `${fmt(lo)} – ${fmt(hi)}` },
     { label: "Low", color: GROWTH_COLOR_PALETTE[0], range: `≤ ${fmt(lo)}` },
   ];
 }
 
-const HeatMapLegend: React.FC<{ stops: [number, string][] }> = ({ stops }) => {
+const HeatMapLegend: React.FC<{ stops: [number, string][]; rangeMin?: number; rangeMax?: number }> = ({ stops, rangeMin, rangeMax }) => {
   const levels = legendLevelsFromStops(stops);
   const gradient = `linear-gradient(90deg, ${GROWTH_COLOR_PALETTE.join(", ")})`;
-  const lo = `${Math.round(stops[0]?.[0] ?? 0)}%`;
-  const hi = `${Math.round(stops[stops.length - 1]?.[0] ?? 0)}%`;
+  const loValue = rangeMin ?? stops.find(([v]) => v >= 0)?.[0] ?? 0;
+  const hiValue = rangeMax ?? stops[stops.length - 1]?.[0] ?? 0;
+  const lo = `${Math.round(loValue)}%`;
+  const hi = `${Math.round(hiValue)}%`;
 
   return (
     <div className="heatmap-legend" role="img" aria-label="Predicted growth heatmap legend">
@@ -218,6 +223,7 @@ const HeatMap: React.FC<HeatMapProps> = ({
   const mapRef = useRef<MapLibreMap | null>(null);
   const popupRef = useRef<maplibregl.Popup | null>(null);
   const [legendStops, setLegendStops] = useState<[number, string][]>(DEFAULT_ANNUAL_STOPS);
+  const [legendRange, setLegendRange] = useState<{ min: number; max: number } | null>(null);
   const onAreaSelectedRef = useRef(onAreaSelected);
   const onViewPropertiesRef = useRef(onViewProperties);
   const onAreaClickRef = useRef(onAreaClick);
@@ -389,6 +395,9 @@ const HeatMap: React.FC<HeatMapProps> = ({
 
       const stops = growthColorStops(areas);
       setLegendStops(stops);
+      const vals = growthValues(areas);
+      const nonNeg = vals.filter((v) => v >= 0);
+      if (nonNeg.length) setLegendRange({ min: nonNeg[0], max: vals[vals.length - 1] });
 
       if (map?.getLayer("growth-fill")) {
         map.setPaintProperty(
@@ -438,7 +447,7 @@ const HeatMap: React.FC<HeatMapProps> = ({
 
   return (
     <div className="heatmap-stage" style={{ position: "relative", width: "100%", height: "100%" }}>
-      <HeatMapLegend stops={legendStops} />
+      <HeatMapLegend stops={legendStops} rangeMin={legendRange?.min} rangeMax={legendRange?.max} />
       <div ref={mapContainerRef} className="heatmap-canvas" style={{ width: "100%", height: "100%" }} />
     </div>
   );

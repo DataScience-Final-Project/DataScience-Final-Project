@@ -44,7 +44,7 @@ def main():
                 ) ON COMMIT DROP;
             """)
 
-            # 2) COPY into staging (very fast)
+            # COPY into staging
             buf = io.StringIO()
             df[needed].to_csv(buf, index=False, header=False)
             buf.seek(0)
@@ -54,7 +54,7 @@ def main():
                 buf
             )
 
-            # 3) upsert into final table
+            # upsert into final table
             cur.execute("""
                 INSERT INTO poi_current (poi_uuid, poi_type_id, geom, name_en, name_he, opening_year)
                 SELECT

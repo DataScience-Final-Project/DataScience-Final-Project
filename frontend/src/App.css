@@ -161,6 +161,7 @@
 
 .dashboard-card--map {
   min-height: 0;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
 }
@@ -178,8 +179,8 @@
 .dashboard-card--map .heatmap-shell {
   flex: 1;
   width: 100%;
-  height: clamp(360px, 62vh, 680px);
-  min-height: 320px;
+  min-height: clamp(360px, 62vh, 680px);
+  max-height: 680px;
   border-radius: 22px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.1);

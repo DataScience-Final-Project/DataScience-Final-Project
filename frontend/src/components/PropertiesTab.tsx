@@ -8,6 +8,7 @@ import {
   type PoiSource,
   type PropertyFilterOptions,
   type PropertyFilters,
+  type PropertyListItem,
 } from '../api/properties';
 
 type PropertiesTabProps = {
