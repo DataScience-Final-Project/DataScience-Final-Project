@@ -1,6 +1,6 @@
 import { Button, Empty, Input, InputNumber, Select, Space, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { SearchOutlined, EnvironmentOutlined, ReloadOutlined } from '@ant-design/icons';
+import { SearchOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import {
   fetchPropertyFilterOptions,
@@ -8,17 +8,12 @@ import {
   type PoiSource,
   type PropertyFilterOptions,
   type PropertyFilters,
-  type PropertyListItem,
 } from '../api/properties';
 
 type PropertiesTabProps = {
   selectedPropertyId: number | null;
-  selectedClusterId: number | null;
-  selectedAreaName: string | null;
   onClearSelectedProperty: () => void;
-  onClearSelectedPolygon: () => void;
   onOpenProperty: (propertyId: number) => void;
-  onViewPolygon: (property: PropertyListItem) => void;
 };
 
 const EMPTY_FILTERS: PropertyFilters = { poiSource: 'both' };
@@ -39,12 +34,8 @@ function formatDate(value: string | null) {
 
 const PropertiesTab = ({
   selectedPropertyId,
-  selectedClusterId,
-  selectedAreaName,
   onClearSelectedProperty,
-  onClearSelectedPolygon,
   onOpenProperty,
-  onViewPolygon,
 }: PropertiesTabProps) => {
   const [filters, setFilters] = useState<PropertyFilters>(EMPTY_FILTERS);
   const [search, setSearch] = useState('');
@@ -61,10 +52,9 @@ const PropertiesTab = ({
     ...filters,
     search: deferredSearch,
     propertyId: selectedPropertyId,
-    clusterId: selectedPropertyId ? null : selectedClusterId,
     page,
     pageSize,
-  }), [deferredSearch, filters, page, pageSize, selectedClusterId, selectedPropertyId]);
+  }), [deferredSearch, filters, page, pageSize, selectedPropertyId]);
 
   useEffect(() => {
     fetchPropertyFilterOptions().then(setOptions).catch(() => {
@@ -124,21 +114,6 @@ const PropertiesTab = ({
     { title: 'Type', dataIndex: 'propertyType', width: 78, render: formatNumber },
     { title: 'Latest price', dataIndex: 'latestSalePrice', width: 130, render: formatNumber },
     { title: 'Sale date', dataIndex: 'latestSaleDate', width: 116, render: formatDate },
-    {
-      title: 'Polygon',
-      key: 'polygon',
-      width: 112,
-      render: (_, property) => (
-        <Button
-          type="link"
-          icon={<EnvironmentOutlined />}
-          disabled={!property.clusterId}
-          onClick={() => onViewPolygon(property)}
-        >
-          View
-        </Button>
-      ),
-    },
   ];
 
   return (
@@ -150,12 +125,6 @@ const PropertiesTab = ({
           <p>Search every stored property field and narrow results by nearby current or future points of interest.</p>
         </div>
         <Space wrap>
-          {selectedClusterId && (
-            <>
-              <Tag color="purple">{selectedAreaName || `Polygon #${selectedClusterId}`}</Tag>
-              <Button onClick={onClearSelectedPolygon}>All polygons</Button>
-            </>
-          )}
           {selectedPropertyId && (
             <>
               <Tag color="blue">Selected property #{selectedPropertyId}</Tag>

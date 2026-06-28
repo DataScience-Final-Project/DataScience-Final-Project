@@ -1,76 +1,103 @@
 import { Button, Empty, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useEffect, useState } from 'react';
-import { fetchProperties, type PropertyListItem } from '../api/properties';
 
-type PolygonPropertiesPanelProps = {
-  clusterId: number | null;
+type HexProperty = {
+  propertyId: number;
+  cityName: string;
+  street: string;
+  houseNumber: string;
+  numRooms: number | null;
+  buildingYear: number | null;
+  floorNumber: number | null;
+  buildingFloors: number | null;
+  assetType: string | null;
+  percentChange: number;
+  price: number;
+};
+
+type Props = {
+  hexId: string | null;
   areaName: string | null;
   onOpenProperty: (propertyId: number) => void;
 };
 
-function propertyAddress(property: PropertyListItem) {
-  return [property.street, property.houseNumber, property.cityName].filter(Boolean).join(', ') || 'Address unavailable';
+function propertyAddress(p: HexProperty) {
+  return [p.street, p.houseNumber, p.cityName].filter(Boolean).join(', ') || 'Address unavailable';
 }
 
-const formatPrice = (value: number | null) => value === null ? '—' : new Intl.NumberFormat('en-US').format(value);
+const formatPrice = (value: number | null) =>
+  value === null ? '—' : new Intl.NumberFormat('en-US').format(value);
 
-const PolygonPropertiesPanel = ({ clusterId, areaName, onOpenProperty }: PolygonPropertiesPanelProps) => {
-  const [properties, setProperties] = useState<PropertyListItem[]>([]);
-  const [total, setTotal] = useState(0);
+const PolygonPropertiesPanel = ({ hexId, areaName, onOpenProperty }: Props) => {
+  const [properties, setProperties] = useState<HexProperty[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!clusterId) {
+    if (!hexId) {
+      setProperties([]);
       return;
     }
 
     const controller = new AbortController();
-    Promise.resolve()
-      .then(() => {
-        if (controller.signal.aborted) return null;
-        setLoading(true);
-        setError(null);
-        return fetchProperties({ clusterId, pageSize: 10 });
+    setLoading(true);
+    setError(null);
+
+    fetch(`http://localhost:4000/heatmap/${hexId}/properties`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+      signal: controller.signal,
+    })
+      .then((r) => {
+        if (!r.ok) throw new Error(`Request failed (${r.status})`);
+        return r.json();
       })
-      .then((result) => {
-        if (controller.signal.aborted || !result) return;
-        setProperties(result.items);
-        setTotal(result.total);
+      .then((data) => {
+        if (!controller.signal.aborted) {
+          setProperties(Array.isArray(data) ? data : []);
+        }
       })
-      .catch((requestError) => {
-        if (controller.signal.aborted) return;
-        setError(requestError instanceof Error ? requestError.message : 'Could not load properties.');
+      .catch((err) => {
+        if (!controller.signal.aborted) {
+          setError(err instanceof Error ? err.message : 'Could not load properties.');
+        }
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
       });
 
     return () => controller.abort();
-  }, [clusterId]);
+  }, [hexId]);
 
-  const columns: ColumnsType<PropertyListItem> = [
+  const columns: ColumnsType<HexProperty> = [
     {
       title: 'Address',
       key: 'address',
-      render: (_, property) => propertyAddress(property),
+      render: (_, p) => propertyAddress(p),
     },
     {
       title: 'Rooms',
       dataIndex: 'numRooms',
       width: 82,
-      render: (value: number | null) => value ?? '—',
+      render: (v: number | null) => v ?? '—',
     },
     {
-      title: 'Building floors',
-      dataIndex: 'buildingFloors',
-      width: 132,
-      render: (value: number | null) => value ?? '—',
+      title: 'Floor',
+      dataIndex: 'floorNumber',
+      width: 82,
+      render: (v: number | null) => v ?? '—',
     },
     {
-      title: 'Latest price',
-      dataIndex: 'latestSalePrice',
+      title: 'Predicted growth',
+      dataIndex: 'percentChange',
+      width: 150,
+      render: (v: number) => `${v.toFixed(1)}%`,
+    },
+    {
+      title: 'Price',
+      dataIndex: 'price',
       width: 132,
       render: formatPrice,
     },
@@ -78,10 +105,8 @@ const PolygonPropertiesPanel = ({ clusterId, areaName, onOpenProperty }: Polygon
       title: '',
       key: 'open',
       width: 100,
-      render: (_, property) => (
-        <Button type="link" onClick={() => onOpenProperty(property.propertyId)}>
-          Open
-        </Button>
+      render: (_, p) => (
+        <Button type="link" onClick={() => onOpenProperty(p.propertyId)}>Open</Button>
       ),
     },
   ];
@@ -90,16 +115,21 @@ const PolygonPropertiesPanel = ({ clusterId, areaName, onOpenProperty }: Polygon
     <section className="polygon-properties" aria-live="polite">
       <div className="polygon-properties__heading">
         <div>
-          <span className="section-kicker">Selected polygon</span>
-          <h2>{areaName || 'Select a polygon on the map'}</h2>
+          <span className="section-kicker">Selected area</span>
+          <h2>{areaName || 'Select an area on the map'}</h2>
         </div>
-        {clusterId && <Tag color="purple">{total.toLocaleString()} properties</Tag>}
+        {hexId && <Tag color="purple">{properties.length} properties</Tag>}
       </div>
 
-      {!clusterId && <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Click a polygon to see its properties." />}
-      {clusterId && error && <div className="properties-error">{error}</div>}
-      {clusterId && !error && (
-        <Table<PropertyListItem>
+      {!hexId && (
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description="Click a hex cell to see its properties."
+        />
+      )}
+      {hexId && error && <div className="properties-error">{error}</div>}
+      {hexId && !error && (
+        <Table<HexProperty>
           className="property-table property-table--polygon"
           columns={columns}
           dataSource={properties}
@@ -107,7 +137,7 @@ const PolygonPropertiesPanel = ({ clusterId, areaName, onOpenProperty }: Polygon
           rowKey="propertyId"
           pagination={false}
           size="small"
-          locale={{ emptyText: 'No mapped properties were found in this polygon.' }}
+          locale={{ emptyText: 'No properties found in this area.' }}
         />
       )}
     </section>
