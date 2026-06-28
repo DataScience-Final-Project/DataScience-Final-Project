@@ -10,7 +10,6 @@ import { GrowthClusterService } from "./growthCluster.service";
         SequelizeModule.forFeature([GrowthCluster]),
     ],
     controllers: [GrowthClusterController],
-    providers: [GrowthClusterRepository, GrowthClusterService]
+    providers: [GrowthClusterRepository, GrowthClusterService],
 })
-
 export class GrowthClusterModule { }

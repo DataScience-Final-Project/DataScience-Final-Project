@@ -2,12 +2,21 @@ import { annualizedGrowthPercent, parseYearsForward } from "./growthMath";
 
 export const normalizeServerData = (serverData: any, yearsForward: string | number = 1) => {
   const years = parseYearsForward(yearsForward);
-  const normalizedData = serverData.map((item: any, index: number) => {
-    
-    // מושכים את מערך הערים מהשרת (אם אין, נשים מערך ריק)
+
+  if (serverData && serverData.type === 'FeatureCollection' && Array.isArray(serverData.features)) {
+    return serverData.features.map((feature: any) => ({
+      ...feature,
+      properties: {
+        ...feature.properties,
+        growth: annualizedGrowthPercent(feature.properties.grade ?? feature.properties.growth ?? 0, feature.properties.horizonYears ?? years),
+      },
+    }));
+  }
+
+  const rows = Array.isArray(serverData) ? serverData : [];
+
+  return rows.map((item: any, index: number) => {
     const citiesArray = item.cities || [];
-    
-    // קובעים את שם האזור: נחבר את שמות הערים (למשל "חדרה, אור עקיבא"). אם אין עיר, נרשום "אזור 1"
     const areaName = citiesArray.length > 0 ? citiesArray.join(", ") : `אזור ${index + 1}`;
 
     return {
@@ -16,20 +25,16 @@ export const normalizeServerData = (serverData: any, yearsForward: string | numb
         id: item.id ?? index + 1,
         clusterId: item.id ?? index + 1,
         name: areaName,
-        // Popup: total projected % for selected horizon; map: annualized % (stable color scale)
         growth: annualizedGrowthPercent(item.grade, years),
         originalGrade: item.grade,
-        // שומרים את מערך הערים כדי שיוצג ברשימה בפופאפ
-        suggestedAreas: citiesArray, 
+        suggestedAreas: citiesArray,
       },
       geometry: {
         type: "Polygon",
         coordinates: [
           item.coordinates.map((coordinate: any) => [coordinate.x, coordinate.y]),
-        ]
-      }
+        ],
+      },
     };
   });
-  
-  return normalizedData;
 };

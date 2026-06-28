@@ -8,6 +8,8 @@ __pycache__/
 python_service/venv/
 python_service/.env
 python_service/.venv/
+.venv/
+venv/
 
 # Jupyter
 .ipynb_checkpoints/
@@ -51,3 +53,43 @@ dist-ssr
 # =====================
 Thumbs.db
 .DS_Store
+
+# =====================
+# Data (local only)
+# =====================
+python_service/data/raw/
+python_service/data/processed/
+python_service/data/**/*.csv
+python_service/data/**/*.xlsx
+python_service/data/**/*.pbf
+outputs/
+
+reports/
+models/
+
+# Common big data formats
+*.csv
+*.parquet
+*.feather
+*.pkl
+*.pickle
+
+# Geo / OSM
+*.osm
+*.pbf
+*.o5m
+*.geojson
+*.jsonl
+*.gpkg
+*.shp
+*.shx
+*.dbf
+*.prj
+*.cpg
+*.tif
+*.tiff
+
+# DB dumps / backups
+*.sql
+*.dump
+*.backup

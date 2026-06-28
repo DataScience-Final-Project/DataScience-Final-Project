@@ -3,7 +3,6 @@ import React, { useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import maplibregl, { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-// הסרנו את הייבוא של נתוני הדמה, משאירים רק את הקומפוננטה
 import AreaInvestmentPopup from "./AreaInvestmentPopup";
 
 /** Hebrew / Arabic labels on vector tiles need the RTL shaping plugin (lazy-loaded). */
@@ -12,19 +11,23 @@ maplibregl.setRTLTextPlugin(
   true
 );
 
-// עדכון ה-Type: פוליגון דורש מערך תלת-ממדי של מספרים
 type AreaFeature = {
   type: "Feature";
   geometry: {
     type: "Polygon";
-    coordinates: number[][][]; // מערך של טבעות קואורדינטות
+    coordinates: number[][][];
   };
   properties: {
     id?: number;
+    clusterId?: number;
+    h3Index?: string;
     name?: string;
+    neighborhoodName?: string;
     growth: number;
-    originalGrade?: number; // הוספנו את הציון המקורי ל-Type
-    suggestedAreas?: any; // הוספנו את מערך הערים
+    grade?: number;
+    horizonYears?: number;
+    originalGrade?: number;
+    suggestedAreas?: any;
     [key: string]: any;
   };
 };
@@ -39,6 +42,8 @@ type HeatMapProps = {
   isActive?: boolean;
   onAreaSelected?: (clusterId: number, areaName: string) => void;
   onViewProperties?: (clusterId: number, areaName: string) => void;
+  /** Called when the user clicks an H3 polygon from the /heatmap feed. */
+  onAreaClick?: (h3Index: string, areaDisplayName: string) => void;
 };
 
 const GROWTH_COLOR_PALETTE = ["#16a34a", "#4ade80", "#facc15", "#ef4444", "#b91c1c"] as const;
@@ -59,7 +64,7 @@ function growthValues(features: AreaFeature[]): number[] {
     .sort((a, b) => a - b);
 }
 
-/** Spread colors across the current result set (lowest → green, highest → red). */
+/** Spread colors across the current result set (lowest -> green, highest -> red). */
 function growthColorStops(features: AreaFeature[]): [number, string][] {
   const values = growthValues(features);
   if (!values.length) return DEFAULT_ANNUAL_STOPS;
@@ -97,6 +102,11 @@ function boundsFromPolygonFeatures(features: AreaFeature[]): maplibregl.LngLatBo
   return hasPoint ? bounds : null;
 }
 
+function selectedAreaFeature(areas: AreaFeature[], selectedClusterId: number | null) {
+  if (!selectedClusterId) return null;
+  return areas.find((area) => Number(area.properties.clusterId ?? area.properties.id) === selectedClusterId) ?? null;
+}
+
 function setMapData(map: MapLibreMap, areas: AreaFeature[], selectedClusterId: number | null) {
   const source = map.getSource("growth-source") as GeoJSONSource | undefined;
   if (source) {
@@ -108,9 +118,7 @@ function setMapData(map: MapLibreMap, areas: AreaFeature[], selectedClusterId: n
 
   const selectedSource = map.getSource("growth-selected-source") as GeoJSONSource | undefined;
   if (selectedSource) {
-    const selectedArea = areas.find(
-      (area) => Number(area.properties.clusterId ?? area.properties.id) === selectedClusterId,
-    );
+    const selectedArea = selectedAreaFeature(areas, selectedClusterId);
     selectedSource.setData({
       type: "FeatureCollection",
       features: selectedArea ? [selectedArea] : [],
@@ -126,17 +134,25 @@ function setMapData(map: MapLibreMap, areas: AreaFeature[], selectedClusterId: n
   }
 }
 
-function selectedAreaFeature(areas: AreaFeature[], selectedClusterId: number | null) {
-  if (!selectedClusterId) return null;
-  return areas.find((area) => Number(area.properties.clusterId ?? area.properties.id) === selectedClusterId) ?? null;
-}
-
 function fitAllAreas(map: MapLibreMap, areas: AreaFeature[]) {
   const bounds = boundsFromPolygonFeatures(areas);
   if (!bounds) return;
 
   map.resize();
   map.fitBounds(bounds, { padding: 48, maxZoom: 14, duration: 600 });
+}
+
+function parseSuggestedAreas(value: unknown) {
+  if (Array.isArray(value)) return value.filter((item): item is string => typeof item === "string");
+  if (typeof value !== "string") return [];
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
+  } catch (error) {
+    console.error("Failed to parse suggestedAreas", error);
+    return [];
+  }
 }
 
 const HeatMap: React.FC<HeatMapProps> = ({
@@ -147,19 +163,22 @@ const HeatMap: React.FC<HeatMapProps> = ({
   isActive = true,
   onAreaSelected,
   onViewProperties,
+  onAreaClick,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const popupRef = useRef<maplibregl.Popup | null>(null);
   const onAreaSelectedRef = useRef(onAreaSelected);
   const onViewPropertiesRef = useRef(onViewProperties);
+  const onAreaClickRef = useRef(onAreaClick);
   const areasRef = useRef(areas);
   const selectedClusterIdRef = useRef(selectedClusterId);
 
   useEffect(() => {
     onAreaSelectedRef.current = onAreaSelected;
     onViewPropertiesRef.current = onViewProperties;
-  }, [onAreaSelected, onViewProperties]);
+    onAreaClickRef.current = onAreaClick;
+  }, [onAreaSelected, onViewProperties, onAreaClick]);
 
   useEffect(() => {
     areasRef.current = areas;
@@ -187,10 +206,9 @@ const HeatMap: React.FC<HeatMapProps> = ({
         },
       });
 
-      // 1. שכבת המילוי (הצבע ה"חם")
       map.addLayer({
         id: "growth-fill",
-        type: "fill", // שינוי מ-heatmap ל-fill
+        type: "fill",
         source: "growth-source",
         paint: {
           "fill-color": growthFillColorExpression(DEFAULT_ANNUAL_STOPS),
@@ -213,7 +231,7 @@ const HeatMap: React.FC<HeatMapProps> = ({
         paint: {
           "line-color": "#ffffff",
           "line-width": 1,
-          "line-opacity": 0.75
+          "line-opacity": 0.75,
         },
       });
 
@@ -245,50 +263,37 @@ const HeatMap: React.FC<HeatMapProps> = ({
         const selectedFeature = event.features?.[0];
         if (!selectedFeature) return;
 
-        const properties = selectedFeature.properties as any;
-        
-        const areaName = properties.name || "Selected area";
+        const properties = selectedFeature.properties as AreaFeature["properties"];
+        const areaName = properties.name || properties.neighborhoodName || "Selected area";
         const clusterId = Number(properties.clusterId ?? properties.id);
-        
-        // אנחנו משתמשים בציון המקורי אם הוא קיים, אחרת מכפילים ב-100 (לפי הסקאלה החדשה)
-        const gradeValue =
-          properties.originalGrade !== undefined
-            ? Number(properties.originalGrade)
-            : Number(properties.growth ?? 0);
+        const h3Index = typeof properties.h3Index === "string" ? properties.h3Index : null;
+        const gradeValue = properties.originalGrade !== undefined
+          ? Number(properties.originalGrade)
+          : Number(properties.grade ?? properties.growth ?? 0);
+        const horizonYears = Number(properties.horizonYears ?? 5);
+        const suggestedAreas = parseSuggestedAreas(properties.suggestedAreas);
 
-        // --- הפיכת הערים ממחרוזת של MapLibre למערך אמיתי ---
-        let parsedCities: string[] = [];
-        try {
-          if (typeof properties.suggestedAreas === "string") {
-            parsedCities = JSON.parse(properties.suggestedAreas);
-          } else if (Array.isArray(properties.suggestedAreas)) {
-            parsedCities = properties.suggestedAreas;
-          }
-        } catch (e) {
-          console.error("Failed to parse suggestedAreas", e);
-          parsedCities = [];
+        if (Number.isFinite(clusterId)) {
+          onAreaSelectedRef.current?.(clusterId, areaName);
         }
-        // ----------------------------------------------------
 
         const popupContainer = document.createElement("div");
         const popupRoot = createRoot(popupContainer);
+        const handleViewProperties = h3Index && onAreaClickRef.current
+          ? () => onAreaClickRef.current?.(h3Index, areaName)
+          : Number.isFinite(clusterId)
+            ? () => onViewPropertiesRef.current?.(clusterId, areaName)
+            : undefined;
 
         popupRoot.render(
           <AreaInvestmentPopup
             areaName={areaName}
             growthPercent={gradeValue}
-            suggestedAreas={parsedCities} // מעבירים את המערך האמיתי מהשרת!
-            onViewProperties={
-              Number.isFinite(clusterId)
-                ? () => onViewPropertiesRef.current?.(clusterId, areaName)
-                : undefined
-            }
+            horizonYears={horizonYears}
+            suggestedAreas={suggestedAreas}
+            onViewProperties={handleViewProperties}
           />
         );
-
-        if (Number.isFinite(clusterId)) {
-          onAreaSelectedRef.current?.(clusterId, areaName);
-        }
 
         popupRef.current?.remove();
         const popup = new maplibregl.Popup({
@@ -318,7 +323,6 @@ const HeatMap: React.FC<HeatMapProps> = ({
     };
   }, []);
 
-  // עדכון הנתונים כשה-areas משתנים
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -354,9 +358,7 @@ const HeatMap: React.FC<HeatMapProps> = ({
     if (!map || fitBoundsNonce === 0 || !areas.length) return;
 
     function fit() {
-      const b = boundsFromPolygonFeatures(areas);
-      if (!b || !map) return;
-      map.fitBounds(b, { padding: 48, maxZoom: 14, duration: 600 });
+      fitAllAreas(map!, areas);
     }
 
     if (map.isStyleLoaded()) {

@@ -53,9 +53,30 @@ function googleMapsUrl(property: PropertyDetails) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(coordinates)}`;
 }
 
-function yad2SearchUrl(property: PropertyDetails) {
-  const searchQuery = propertyAddress(property);
-  return `https://www.yad2.co.il/realestate/forsale?propertygroup=apartments&searchText=${encodeURIComponent(searchQuery)}`;
+function yad2ListingsUrl(property: PropertyDetails) {
+  const params = new URLSearchParams({
+    property: '1',
+    propertyGroup: 'apartments',
+  });
+
+  if (property.numRooms !== null && Number.isFinite(property.numRooms)) {
+    const rooms = String(property.numRooms);
+    params.set('minRooms', rooms);
+    params.set('maxRooms', rooms);
+  }
+
+  if (property.latestSalePrice !== null && Number.isFinite(property.latestSalePrice)) {
+    const priceStep = 50_000;
+    const minPrice = Math.max(
+      priceStep,
+      Math.floor((property.latestSalePrice * 0.8) / priceStep) * priceStep,
+    );
+    const maxPrice = Math.ceil((property.latestSalePrice * 1.2) / priceStep) * priceStep;
+    params.set('minPrice', String(minPrice));
+    params.set('maxPrice', String(maxPrice));
+  }
+
+  return `https://www.yad2.co.il/realestate/forsale?${params.toString()}`;
 }
 
 function parsePositiveInteger(value: string | null) {
@@ -281,8 +302,8 @@ const PropertyDetailsPage = () => {
                   <a className="property-detail-page__action" href={googleMapsUrl(details)} target="_blank" rel="noreferrer">
                     <EnvironmentOutlined /> Open location
                   </a>
-                  <a className="property-detail-page__action property-detail-page__action--primary" href={yad2SearchUrl(details)} target="_blank" rel="noreferrer">
-                    <LinkOutlined /> Browse on Yad2
+                  <a className="property-detail-page__action property-detail-page__action--primary" href={yad2ListingsUrl(details)} target="_blank" rel="noreferrer">
+                    <LinkOutlined /> Find similar on Yad2
                   </a>
                 </div>
               </div>
@@ -312,7 +333,7 @@ const PropertyDetailsPage = () => {
                   <span className="section-kicker">Most recent transaction</span>
                   <strong>{details.latestSalePrice === null ? '—' : `₪${formatNumber(details.latestSalePrice)}`}</strong>
                   <span>{formatDate(details.latestSaleDate)}</span>
-                  <p>Yad2 photos and a direct listing URL are not included in this transaction dataset. The Yad2 button opens current sale listings without implying a match.</p>
+                  <p>This transaction dataset does not include a Yad2 ad ID. The Yad2 button opens current apartment listings filtered by rooms and a comparable price range.</p>
                 </section>
               </div>
 

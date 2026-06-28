@@ -10,8 +10,8 @@ export type IGrowthCluster = {
 }
 
 type PolygonGeometry = {
-  type: 'Polygon';
-  coordinates: number[][][];
+    type: 'Polygon';
+    coordinates: number[][][];
 };
 
 @Table({ tableName: 'growth_clusters', timestamps: false })

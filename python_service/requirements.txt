@@ -1,51 +1,28 @@
-# ======================
-# Web / API
-# ======================
-fastapi==0.110.0
-uvicorn[standard]==0.27.1
-
-# ======================
-# Database
-# ======================
+# ---- Core ETL / DB ----
+python-dotenv>=1.2.1
 psycopg2-binary==2.9.11
+SQLAlchemy>=2.0.0
+GeoAlchemy2>=0.14.0
 
-# ======================
-# Core scientific stack
-# ======================
-numpy==2.2.6
-pandas==2.2.3
-scipy==1.15.2
-scikit-learn==1.7.2
-joblib==1.4.2
-threadpoolctl==3.5.0
+# ---- Data ----
+pandas>=2.3.3
+numpy>=2.0.0
+requests>=2.32.5
+openpyxl>=3.1.0
 
-# ======================
-# Machine Learning
-# ======================
-xgboost==3.1.2
+# ---- Geo / OSM ----
+geopandas>=1.1.2
+pyrosm>=0.6.2
+shapely>=2.1.2
+pyproj>=3.6.0
+pyogrio>=0.7.0
+h3>=4.0.0
 
-# ======================
-# Geospatial stack (Python 3.12 compatible)
-# ======================
-geopandas==0.14.4
-shapely==2.0.6
-pyproj==3.7.0
-pyogrio==0.10.0
-mapclassify==2.8.1
-folium==0.16.0
-xyzservices==2024.9.0
+# ---- Text Processing / Enrichment ----
+rapidfuzz>=3.5.0   
 
-# ======================
-# Visualization
-# ======================
-matplotlib==3.10.0
-
-# ======================
-# Networking / utilities
-# ======================
-requests==2.32.3
-python-dateutil==2.9.0.post0
-pytz==2024.2
-tzdata==2024.2
-six==1.17.0
-packaging==24.2
+# ---- Machine Learning ----
+xgboost>=2.0.0
+scikit-learn>=1.3.0 
+shap>=0.44.0
+torch>=2.0.0

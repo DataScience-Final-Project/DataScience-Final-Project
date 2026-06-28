@@ -62,7 +62,7 @@ const App = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const currentUser = getCurrentUser();
-  const [filtersFormState, setFiltersFormState] = useState<SearchFilters>({ yearsForward: '1' });
+  const [filtersFormState, setFiltersFormState] = useState<SearchFilters>({ yearsForward: '5' });
   const [mapAreas, setMapAreas] = useState<MapArea[]>([]);
   const [mapFitNonce, setMapFitNonce] = useState(0);
   const [appliedValues, setAppliedValues] = useState<SearchFilters | null>(null);
@@ -143,7 +143,7 @@ const App = () => {
 
   useEffect(() => {
     const fetchMapArea = async () => {
-      const years = filtersFormState.yearsForward?.replace('+', '') || '1';
+      const years = filtersFormState.yearsForward?.replace('+', '') || '5';
       let url = `http://localhost:4000/growth-clusters?years=${years}`;
 
       if (filtersFormState.city) {
@@ -189,7 +189,7 @@ const App = () => {
     selectedClusterFetchRef.current = selectedClusterId;
 
     const fetchSelectedCluster = async () => {
-      const years = filtersFormState.yearsForward?.replace('+', '') || '1';
+      const years = filtersFormState.yearsForward?.replace('+', '') || '5';
 
       try {
         const response = await fetch(
@@ -206,7 +206,6 @@ const App = () => {
           }
           return [...current, area];
         });
-
       } catch (error) {
         if (!controller.signal.aborted) {
           console.error('Could not load the selected polygon', error);
@@ -252,7 +251,7 @@ const App = () => {
     let area = mapAreas.find((mapArea) => areaClusterId(mapArea) === property.clusterId);
 
     if (!area) {
-      const years = filtersFormState.yearsForward?.replace('+', '') || '1';
+      const years = filtersFormState.yearsForward?.replace('+', '') || '5';
       try {
         const response = await fetch(`http://localhost:4000/growth-clusters?years=${years}&clusterId=${property.clusterId}`);
         if (!response.ok) throw new Error(`Request failed (${response.status})`);
@@ -280,6 +279,7 @@ const App = () => {
     city: filtersFormState.city,
     slider: filtersFormState.slider,
     yearsForward: filtersFormState.yearsForward,
+    roomsRange: filtersFormState.roomsRange,
   };
 
   return (

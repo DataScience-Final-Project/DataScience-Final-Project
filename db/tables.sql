@@ -214,3 +214,18 @@ CREATE TABLE property_features_snapshot (
 
   PRIMARY KEY (property_id, snapshot_year, horizon_years)
 );
+
+CREATE TABLE property_predictions (
+  property_id       BIGINT   NOT NULL REFERENCES properties(property_id),
+  horizon_years     SMALLINT NOT NULL,
+  log_change        FLOAT    NOT NULL,
+  percent_change    FLOAT    NOT NULL,
+  price_at_snapshot BIGINT,
+  PRIMARY KEY (property_id, horizon_years)
+);
+
+CREATE INDEX idx_property_predictions_horizon
+ON property_predictions (horizon_years);
+
+CREATE INDEX idx_properties_city_rooms_type
+ON properties (city_name, num_rooms, property_type);
