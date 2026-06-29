@@ -1,5 +1,30 @@
 CREATE EXTENSION IF NOT EXISTS postgis;
 
+CREATE TABLE users (
+  user_id            BIGSERIAL PRIMARY KEY,
+  email              TEXT NOT NULL UNIQUE,
+  phone              TEXT NOT NULL UNIQUE,
+  username           TEXT NOT NULL UNIQUE,
+  first_name         TEXT NOT NULL,
+  last_name          TEXT NOT NULL,
+  password_hash      TEXT NOT NULL,
+  password_salt      TEXT NOT NULL,
+  password_algorithm TEXT NOT NULL,
+  created_at         TIMESTAMP NOT NULL DEFAULT now(),
+  updated_at         TIMESTAMP NOT NULL DEFAULT now()
+);
+
+CREATE TABLE saved_searches (
+  id          BIGSERIAL PRIMARY KEY,
+  user_id     BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  name        TEXT NOT NULL,
+  filters     JSONB NOT NULL,
+  created_at  TIMESTAMP NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_saved_searches_user
+ON saved_searches(user_id);
+
 CREATE TABLE properties (
   property_id      BIGSERIAL PRIMARY KEY,
   city_name        TEXT,
@@ -13,8 +38,10 @@ CREATE TABLE properties (
 
   num_rooms        FLOAT,
   building_year    INT,
+  floor_number     INT,
   building_floors  INT,
-  property_type    SMALLINT
+  property_type    SMALLINT,
+  asset_type       TEXT
 );
 
 CREATE INDEX idx_properties_geom
@@ -189,3 +216,18 @@ CREATE TABLE property_features_snapshot (
 
   PRIMARY KEY (property_id, snapshot_year, horizon_years)
 );
+
+CREATE TABLE property_predictions (
+  property_id       BIGINT   NOT NULL REFERENCES properties(property_id),
+  horizon_years     SMALLINT NOT NULL,
+  log_change        FLOAT    NOT NULL,
+  percent_change    FLOAT    NOT NULL,
+  price_at_snapshot BIGINT,
+  PRIMARY KEY (property_id, horizon_years)
+);
+
+CREATE INDEX idx_property_predictions_horizon
+ON property_predictions (horizon_years);
+
+CREATE INDEX idx_properties_city_rooms_type
+ON properties (city_name, num_rooms, property_type);

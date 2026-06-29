@@ -2,12 +2,33 @@ import io
 import re
 import pandas as pd
 from pathlib import Path
-
 from etl.common.db import get_conn
 from etl.common.paths import PROCESSED_DIR
 
 CSV_PATH = Path(PROCESSED_DIR) / "sales_output.csv"
 HOUSE_NUM_RE = re.compile(r"(\d{1,5})")
+
+_FLOOR_MAP = {
+    "קרקע": 0, "מרתף": -1,
+    "ראשון": 1, "ראשונה": 1,
+    "שני": 2, "שניה": 2, "שנייה": 2,
+    "שלישי": 3, "שלישית": 3,
+    "רביעי": 4, "רביעית": 4,
+    "חמישי": 5, "חמישית": 5,
+    "שישי": 6, "שישית": 6,
+    "שביעי": 7, "שביעית": 7,
+    "שמיני": 8, "שמינית": 8,
+    "תשיעי": 9, "תשיעית": 9,
+    "עשירי": 10, "עשירית": 10,
+}
+
+def parse_floor(s) -> float:
+    if pd.isna(s) or s == "":
+        return float("nan")
+    try:
+        return float(s)
+    except (ValueError, TypeError):
+        return float(_FLOOR_MAP.get(str(s).strip(), float("nan")))
 
 def extract_house_number(s: str):
     if not s:
@@ -29,6 +50,7 @@ def main():
     df["DEALDATETIME"] = pd.to_datetime(df["DEALDATETIME"], errors="coerce")
     df["house_number"] = df["DISPLAYADRESS"].apply(extract_house_number)
 
+    df["FLOORNO"] = df["FLOORNO"].apply(parse_floor)
     for col in ["BUILDINGYEAR", "BUILDINGFLOORS", "TYPE", "ASSETROOMNUM"]:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
@@ -45,16 +67,18 @@ def main():
     stg = df[[
         "property_key", "city_name", "street", "house_number",
         "lat", "lon", "geom",
-        "ASSETROOMNUM", "BUILDINGYEAR", "BUILDINGFLOORS", "TYPE",
-        "DEALDATETIME", "DEALAMOUNT"
+        "ASSETROOMNUM", "BUILDINGYEAR", "BUILDINGFLOORS", "FLOORNO", "TYPE",
+        "DEALDATETIME", "DEALAMOUNT", "DEALNATUREDESCRIPTION"
     ]].copy().rename(columns={
         "ASSETROOMNUM": "num_rooms",
         "BUILDINGYEAR": "building_year",
         "BUILDINGFLOORS": "building_floors",
+        "FLOORNO": "floor_number",
         "TYPE": "property_type",
         "DEALDATETIME": "sale_datetime",
         "DEALAMOUNT": "sale_price",
         "geom": "geom_ewkt",
+        "DEALNATUREDESCRIPTION": "asset_type"
     })
 
     print(f"✅ Rows to load: {len(stg):,}")
@@ -74,7 +98,9 @@ def main():
                   num_rooms DOUBLE PRECISION,
                   building_year TEXT,
                   building_floors TEXT,
+                  floor_number TEXT,
                   property_type TEXT,
+                  asset_type TEXT,
                   sale_datetime TIMESTAMP,
                   sale_price TEXT
                 ) ON COMMIT DROP;
@@ -88,8 +114,8 @@ def main():
                 COPY stg_sales (
                   property_key, city_name, street, house_number,
                   lat, lon, geom_ewkt,
-                  num_rooms, building_year, building_floors, property_type,
-                  sale_datetime, sale_price
+                  num_rooms, building_year, building_floors, floor_number, property_type,
+                  sale_datetime, sale_price, asset_type
                 )
                 FROM STDIN WITH (FORMAT csv)
             """, buf)
@@ -106,7 +132,7 @@ def main():
                 INSERT INTO properties (
                 property_key, city_name, street, house_number,
                 lat, lon, geom,
-                num_rooms, building_year, building_floors, property_type
+                num_rooms, building_year, building_floors, floor_number, property_type, asset_type
                 )
                 SELECT DISTINCT ON (property_key)
                 property_key,
@@ -122,9 +148,13 @@ def main():
                 CASE WHEN NULLIF(BTRIM(building_floors),'') IS NULL THEN NULL
                     ELSE CAST(CAST(building_floors AS NUMERIC) AS INT)
                 END,
+                CASE WHEN NULLIF(BTRIM(floor_number),'') IS NULL THEN NULL
+                    ELSE CAST(CAST(floor_number AS NUMERIC) AS INT)
+                END,
                 CASE WHEN NULLIF(BTRIM(property_type),'') IS NULL THEN NULL
                     ELSE CAST(CAST(property_type AS NUMERIC) AS INT)
-                END
+                END,
+                NULLIF(BTRIM(asset_type),'')
                 FROM stg_sales
                 WHERE property_key IS NOT NULL AND BTRIM(property_key) <> ''
                 AND lat IS NOT NULL AND lon IS NOT NULL
@@ -139,7 +169,9 @@ def main():
                 num_rooms = COALESCE(EXCLUDED.num_rooms, properties.num_rooms),
                 building_year = COALESCE(EXCLUDED.building_year, properties.building_year),
                 building_floors = COALESCE(EXCLUDED.building_floors, properties.building_floors),
-                property_type = COALESCE(EXCLUDED.property_type, properties.property_type);
+                floor_number = COALESCE(EXCLUDED.floor_number, properties.floor_number),
+                property_type = COALESCE(EXCLUDED.property_type, properties.property_type),
+                asset_type = COALESCE(EXCLUDED.asset_type, properties.asset_type);
             """)
 
             # Unique index for transactions to avoid duplicates
