@@ -1,98 +1,127 @@
-import numpy as np
-import pandas as pd
+from dataclasses import dataclass
 from typing import Tuple
-from sklearn.model_selection import train_test_split
-from ml.config import TARGET_COL, COLS_TO_DROP
 
-def prepare_data(df: pd.DataFrame, split_year: int) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
-    
-    print("Preparing data pipeline (Random Split 80/20)...")
-    
-    # ==========================================
-    # 1. Type Casting & Cleanup
-    # ==========================================
-    
-    # Drop columns that are 100% missing values (prevents the 0-category bug)
-    df = df.dropna(axis=1, how='all')
+import pandas as pd
 
-    # ==========================================
-    # 0. Outlier Removal (הסרת עסקאות מסחריות, טעויות ומשפחה)
-    # ==========================================
-    initial_len = len(df)
-    
-    # 1. מסנן אבסולוטי: מחירים בין חצי מיליון ל-15 מיליון (מסנן משרדי ענק וטעויות)
-    valid_price_mask = (
-        (df['price_t0'] >= 500000) & (df['price_t0'] <= 15000000) &
-        (df['price_t1'] >= 500000) & (df['price_t1'] <= 15000000)
-    )
-    df = df[valid_price_mask].copy()
-    
-    # how much did the price change
-    price_ratio = df['price_t1'] / df['price_t0']
-    
-    # removes anomalies where price changed by more than 4x or less than 0.6x 
-    logical_ratio_mask = (price_ratio >= 0.6) & (price_ratio <= 4.0)
-    df = df[logical_ratio_mask].copy()
-    
-    print(f"🧹 Removed {initial_len - len(df)} extreme price outliers (Commercial/Family/Typos).")
-    
-    # Convert known categorical columns
-    categorical_cols = ['city_name', 'location_accuracy']
-    for col in categorical_cols:
-        if col in df.columns:
-            df[col] = df[col].astype('category')
-
-    # Safely convert health scores to numeric
-    numeric_cols = ['health_score_now', 'health_score_future']
-    for col in numeric_cols:
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors='coerce')
-            
-    # THE NEW SAFETY NET: Drop any remaining text ('object') columns.
-    object_cols = df.select_dtypes(include=['object']).columns
-    if len(object_cols) > 0:
-        print(f"🧹 Dropping unhandled text columns to prevent crashes: {list(object_cols)}")
-        df = df.drop(columns=object_cols)
-
-    poi_types = ['school', 'train', 'health', 'park', 'supermarket', 'mall',
-             'hotel', 'kindergarten', 'light_rail', 'bus', 'hospital', 'clinic']
-    for poi in poi_types:
-        now_col = f'{poi}_score_now'
-        future_col = f'{poi}_score_future'
-        if now_col in df.columns and future_col in df.columns:
-            df[f'{poi}_score_delta'] = df[future_col] - df[now_col]
-    df['log_price_t0'] = np.log(df['price_t0'])        
-
-    # ==========================================
-        
-    # Quick Data Analysis
-    future_cols = [col for col in df.columns if 'future' in col]
-    has_future_infra = (df[future_cols] > 0).any(axis=1)
-    print(f"📊 Data Sparsity: {has_future_infra.sum()} out of {len(df)} properties had new infrastructure built nearby.")
-        
-    # ==========================================
-    # 2. Random Split (השיטה החדשה שלנו!)
-    # ==========================================
-    
-    # קודם כל מפרידים את המטרה (y) מהמאפיינים (X)
-    cols_to_drop_safe = [c for c in COLS_TO_DROP if c in df.columns]
-    X = df.drop(columns=cols_to_drop_safe)
-    y = df[TARGET_COL]
-    
-    # SPLIT_YEAR = 2014
-    # TRAIN_START = 2010  # only recent history, macro conditions closer to test
-
-    # train_mask = (X['snapshot_year'] >= TRAIN_START) & (X['snapshot_year'] < SPLIT_YEAR)
-    # test_mask = X['snapshot_year'] >= SPLIT_YEAR
+from ml.config import COHORT_BASELINE_COL, COLS_TO_DROP, RAW_TARGET_COL, TARGET_COL
+from ml.historical_features import HistoricalMomentumFeatureEngineer
+from ml.local_market_features import LocalMarketFeatureEngineer
+from ml.preprocessing import FeatureEngineer, TukeyOutlierRemover
+from ml.splitting import OutcomeYearSplitter, TemporalSplitResult
 
 
-    # X_train = X[train_mask].copy()
-    # y_train = y[train_mask].copy()
-    # X_test = X[test_mask].copy()
-    # y_test = y[test_mask].copy()
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    
-    print(f"✅ Train set: {X_train.shape[0]} rows")
-    print(f"✅ Test set:  {X_test.shape[0]} rows")
-    
-    return X_train, X_test, y_train, y_test
+@dataclass
+class PreparedData:
+    X_train: pd.DataFrame
+    X_val: pd.DataFrame
+    X_test: pd.DataFrame
+    y_train: pd.Series
+    y_val: pd.Series
+    y_test: pd.Series
+    split: TemporalSplitResult
+
+
+class DataPipeline:
+    def __init__(self, horizon_config: dict):
+        self.horizon_config = horizon_config
+        self.feature_engineer = FeatureEngineer(
+            use_market_trend=horizon_config.get("use_market_trend", False),
+            market_trend_area_col=horizon_config.get("market_trend_area_col", "city_name"),
+        )
+        self.historical_feature_engineer = HistoricalMomentumFeatureEngineer(
+            recent_window_years=horizon_config.get("recent_window_years")
+        )
+        self.local_market_feature_engineer = LocalMarketFeatureEngineer()
+        self.splitter = OutcomeYearSplitter(
+            target_train_ratio=horizon_config.get("target_train_ratio", 0.8),
+            validation_ratio=horizon_config.get("validation_ratio", 0.15),
+        )
+
+    def prepare(self, df: pd.DataFrame) -> PreparedData:
+        print("Preparing data pipeline (temporal train/validation/test split)...")
+        df = self._remove_invalid_prices(df)
+        df = self.feature_engineer.transform(df)
+        df = self.historical_feature_engineer.transform(df)
+        df = self.local_market_feature_engineer.transform(df)
+        df = self._add_relative_target(df)
+
+        split = self.splitter.split(df)
+        train_df = self._remove_train_outliers(split.train_df)
+        val_df = self._keep_valid_prices(split.val_df)
+        test_df = self._keep_valid_prices(split.test_df)
+
+        X_train, y_train = self._split_xy(train_df)
+        X_val, y_val = self._split_xy(val_df)
+        X_test, y_test = self._split_xy(test_df)
+
+        print(f"Temporal split year: {split.relevant_year}")
+        print(f"Train set: {X_train.shape[0]} rows")
+        print(f"Validation set: {X_val.shape[0]} rows")
+        print(f"Test set: {X_test.shape[0]} rows")
+
+        return PreparedData(
+            X_train=X_train,
+            X_val=X_val,
+            X_test=X_test,
+            y_train=y_train,
+            y_val=y_val,
+            y_test=y_test,
+            split=split,
+        )
+
+    def _remove_invalid_prices(self, df: pd.DataFrame) -> pd.DataFrame:
+        initial_len = len(df)
+        df = self._keep_valid_prices(df)
+        removed = initial_len - len(df)
+        if removed:
+            print(f"Removed {removed} rows with non-positive prices.")
+        return df
+
+    def _keep_valid_prices(self, df: pd.DataFrame) -> pd.DataFrame:
+        return df[(df['price_t0'] > 0) & (df['price_t1'] > 0)].copy()
+
+    def _add_relative_target(self, df: pd.DataFrame) -> pd.DataFrame:
+        required_cols = {'horizon_years', 'snapshot_year', RAW_TARGET_COL}
+        missing_cols = required_cols.difference(df.columns)
+        if missing_cols:
+            raise ValueError(f"Cannot create relative target: missing columns {sorted(missing_cols)}.")
+
+        df = df.copy()
+        df[COHORT_BASELINE_COL] = (
+            df.groupby(['horizon_years', 'snapshot_year'], observed=True)[RAW_TARGET_COL]
+            .transform('mean')
+        )
+        df[TARGET_COL] = df[RAW_TARGET_COL] - df[COHORT_BASELINE_COL]
+        return df
+
+    def _remove_train_outliers(self, train_df: pd.DataFrame) -> pd.DataFrame:
+        train_df = train_df.copy()
+        train_df['_price_ratio'] = train_df['price_t1'] / train_df['price_t0']
+
+        remover = TukeyOutlierRemover(columns=['price_t0', 'price_t1', '_price_ratio'])
+        filtered_train = remover.fit(train_df).transform(train_df)
+        filtered_train = filtered_train.drop(columns=['_price_ratio'])
+
+        removed = len(train_df) - len(filtered_train)
+        print(f"Removed {removed} train outliers using Tukey's IQR method.")
+        return filtered_train
+
+    def _split_xy(self, df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
+        cols_to_drop_safe = [c for c in COLS_TO_DROP if c in df.columns]
+        X = df.drop(columns=cols_to_drop_safe)
+        y = df[TARGET_COL]
+        return X.copy(), y.copy()
+
+
+def prepare_data(
+    df: pd.DataFrame,
+    split_year: int | None = None,
+    horizon_config: dict | None = None,
+) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
+    config = horizon_config or {}
+    prepared = DataPipeline(config).prepare(df)
+    return prepared.X_train, prepared.X_test, prepared.y_train, prepared.y_test
+
+
+def prepare_train_val_test(df: pd.DataFrame, horizon_config: dict) -> PreparedData:
+    return DataPipeline(horizon_config).prepare(df)

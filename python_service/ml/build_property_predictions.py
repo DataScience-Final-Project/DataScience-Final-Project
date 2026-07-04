@@ -1,11 +1,16 @@
-import pandas as pd
-import xgboost as xgb
-import numpy as np
-from sqlalchemy import create_engine
 import os
-from dotenv import load_dotenv
 
-from ml.config import COLS_TO_DROP
+import numpy as np
+import pandas as pd
+from dotenv import load_dotenv
+from sqlalchemy import create_engine
+
+from ml.clustering import build_growth_clusters, save_growth_clusters
+from ml.config import PREDICTION_BASELINE_YEAR, PREDICTION_TEXT_COLS, RAW_TARGET_COL
+from ml.historical_features import HistoricalMomentumFeatureEngineer
+from ml.local_market_features import LocalMarketFeatureEngineer
+from ml.modeling import HorizonConfigProvider, ModelRegistry
+from ml.preprocessing import FeatureEngineer
 
 load_dotenv()
 
@@ -13,83 +18,47 @@ load_dotenv()
 def build_and_save_property_predictions():
     print("Starting Per-Property Prediction Generation...")
 
-    engine = create_engine(f"postgresql://{os.getenv('PGUSER')}:{os.getenv('PGPASSWORD')}@{os.getenv('PGHOST')}:{os.getenv('PGPORT')}/{os.getenv('PGDATABASE')}")
+    engine = create_engine(_db_url())
+    config_provider = HorizonConfigProvider()
+    model_registry = ModelRegistry(config_provider)
 
-    print("Loading Machine Learning Models...")
-    model_5y = xgb.XGBRegressor(enable_categorical=True)
-    model_5y.load_model("data/saved_models/xgb_real_estate_5yr_v1.json")
+    prediction_frames = []
+    cluster_frames = []
 
-    model_10y = xgb.XGBRegressor(enable_categorical=True)
-    model_10y.load_model("data/saved_models/xgb_real_estate_10yr_v1.json")
+    for horizon in config_provider.horizons():
+        print(f"\nGenerating {horizon}-year property predictions...")
+        model = model_registry.load_model(horizon)
+        full_df = _load_horizon_snapshots(engine, horizon)
+        df = _prediction_rows(full_df)
+        if df.empty:
+            print(f"No prediction snapshots found for {horizon}-year horizon. Skipping.")
+            continue
 
-    print("Loading all 2014 property snapshots from Database...")
-    query = """
-        SELECT s.*, p.lat, p.lon
-        FROM property_features_snapshot s
-        JOIN properties p ON s.property_id = p.property_id
-        WHERE s.snapshot_year = 2014
-          AND s.price_t0 BETWEEN 500000 AND 15000000
-    """
-    df_all = pd.read_sql_query(query, engine)
+        baseline = _cohort_baseline(df, horizon)
+        relative_log_change = _predict_relative_log_change(full_df, df.index, model, config_provider.get(horizon))
+        raw_log_change = relative_log_change + baseline
 
-    df_all = df_all.replace(r'^\s*$', np.nan, regex=True)
-    df_all = df_all.replace(['NULL', 'null', 'None'], np.nan)
+        prediction_frames.append(pd.DataFrame({
+            'property_id': df['property_id'].values,
+            'horizon_years': horizon,
+            'log_change': raw_log_change,
+            'percent_change': np.round(np.expm1(raw_log_change) * 100, 2),
+            'price_at_snapshot': df['price_t0'].round(0).astype('Int64').values,
+        }))
 
-    cols_to_keep_as_text = ['city_name', 'street', 'property_key', 'house_number']
-    for col in df_all.columns:
-        if col not in cols_to_keep_as_text and col not in ['lat', 'lon']:
-            df_all[col] = pd.to_numeric(df_all[col], errors='coerce')
+        cluster_frames.append(pd.DataFrame({
+            'property_id': df['property_id'].values,
+            'horizon_years': horizon,
+            'log_change': raw_log_change,
+            'lat': df['lat'].values,
+            'lon': df['lon'].values,
+        }))
 
-    poi_types = ['school', 'train', 'health', 'park', 'supermarket', 'mall',
-                 'hotel', 'kindergarten', 'light_rail', 'bus', 'hospital', 'clinic']
-    for poi in poi_types:
-        now_col = f'{poi}_score_now'
-        future_col = f'{poi}_score_future'
-        if now_col in df_all.columns and future_col in df_all.columns:
-            df_all[f'{poi}_score_delta'] = df_all[future_col] - df_all[now_col]
+    if not prediction_frames:
+        print("No predictions generated. Nothing to save.")
+        return
 
-    df_all['log_price_t0'] = np.log(df_all['price_t0'])
-
-    expected_cols = model_5y.get_booster().feature_names
-
-    print("Predicting 5-year and 10-year growth for each property...")
-    X = df_all[[c for c in expected_cols if c in df_all.columns]].copy()
-
-    if 'num_rooms' in X.columns:
-        X['num_rooms'] = X['num_rooms'].fillna(3)
-
-    if 'location_accuracy' not in X.columns:
-        X['location_accuracy'] = 1
-    X['location_accuracy'] = X['location_accuracy'].fillna(1).astype('category')
-
-    if 'city_name' in X.columns:
-        X['city_name'] = X['city_name'].fillna(X['city_name'].mode()[0]).astype('category')
-
-    for col in expected_cols:
-        if col not in X.columns:
-            X[col] = np.nan
-
-    X = X[expected_cols]
-
-    raw_5y = model_5y.predict(X)
-    raw_10y = model_10y.predict(X)
-
-    rows_5y = pd.DataFrame({
-        'property_id':        df_all['property_id'].values,
-        'horizon_years':      5,
-        'log_change':         raw_5y,
-        'percent_change':     np.round(np.expm1(raw_5y) * 100, 2),
-        'price_at_snapshot':  df_all['price_t0'].round(0).astype('Int64').values,
-    })
-    rows_10y = pd.DataFrame({
-        'property_id':        df_all['property_id'].values,
-        'horizon_years':      10,
-        'log_change':         raw_10y,
-        'percent_change':     np.round(np.expm1(raw_10y) * 100, 2),
-        'price_at_snapshot':  df_all['price_t0'].round(0).astype('Int64').values,
-    })
-
-    output_df = pd.concat([rows_5y, rows_10y], ignore_index=True)
+    output_df = pd.concat(prediction_frames, ignore_index=True)
 
     print(f"Writing {len(output_df)} property predictions to DB...")
     output_df.to_sql(
@@ -101,6 +70,88 @@ def build_and_save_property_predictions():
         chunksize=5000,
     )
     print(f"Done. {len(output_df)} rows written to property_predictions.")
+
+    cluster_input = pd.concat(cluster_frames, ignore_index=True)
+    clusters = build_growth_clusters(cluster_input)
+    print(f"Writing {len(clusters)} DBSCAN clusters to growth_clusters...")
+    save_growth_clusters(engine, clusters)
+    print(f"Done. {len(clusters)} rows written to growth_clusters.")
+
+
+def _db_url() -> str:
+    return (
+        f"postgresql://{os.getenv('PGUSER')}:{os.getenv('PGPASSWORD')}"
+        f"@{os.getenv('PGHOST')}:{os.getenv('PGPORT')}/{os.getenv('PGDATABASE')}"
+    )
+
+
+def _load_horizon_snapshots(engine, horizon: int) -> pd.DataFrame:
+    print(f"Loading snapshots for {horizon}-year horizon...")
+    query = f"""
+        SELECT s.*, p.lat, p.lon
+        FROM property_features_snapshot s
+        JOIN properties p ON s.property_id = p.property_id
+        WHERE s.horizon_years = {horizon}
+          AND s.price_t0 IS NOT NULL
+    """
+    df = pd.read_sql_query(query, engine)
+    print(f"Loaded {len(df)} rows for {horizon}-year feature history.")
+    return df
+
+
+def _prediction_rows(df: pd.DataFrame) -> pd.DataFrame:
+    mask = (
+        (df['snapshot_year'] == PREDICTION_BASELINE_YEAR)
+        & (df['price_t0'].between(500000, 15000000))
+    )
+    result = df.loc[mask].copy()
+    print(f"Selected {len(result)} baseline rows for prediction.")
+    return result
+
+
+def _cohort_baseline(df: pd.DataFrame, horizon: int) -> float:
+    if RAW_TARGET_COL not in df.columns:
+        print(f"No {RAW_TARGET_COL} column found. Using 0 baseline for {horizon}-year horizon.")
+        return 0.0
+
+    baseline = pd.to_numeric(df[RAW_TARGET_COL], errors='coerce').mean()
+    if not np.isfinite(baseline):
+        print(f"No valid cohort baseline found. Using 0 baseline for {horizon}-year horizon.")
+        return 0.0
+
+    print(f"Using {horizon}-year cohort baseline log growth: {baseline:.4f}")
+    return float(baseline)
+
+
+def _predict_relative_log_change(
+    full_df: pd.DataFrame,
+    prediction_index: pd.Index,
+    model,
+    horizon_config: dict,
+) -> np.ndarray:
+    feature_engineer = FeatureEngineer(
+        use_market_trend=horizon_config.get('use_market_trend', False),
+        market_trend_area_col=horizon_config.get('market_trend_area_col', 'city_name'),
+    )
+    historical_feature_engineer = HistoricalMomentumFeatureEngineer(
+        recent_window_years=horizon_config.get('recent_window_years')
+    )
+    local_market_feature_engineer = LocalMarketFeatureEngineer()
+    expected_cols = model.get_booster().feature_names
+
+    passthrough_cols = {*PREDICTION_TEXT_COLS, 'lat', 'lon'}
+    cleaned = feature_engineer._clean_raw_prediction_values(full_df, passthrough_cols)
+    transformed = feature_engineer.transform(cleaned)
+    transformed = historical_feature_engineer.transform(transformed)
+    transformed = local_market_feature_engineer.transform(transformed)
+    prediction_df = transformed.loc[prediction_index]
+
+    X = prediction_df[[c for c in expected_cols if c in prediction_df.columns]].copy()
+    for col in expected_cols:
+        if col not in X.columns:
+            X[col] = np.nan
+    X = X[expected_cols]
+    return model.predict(X)
 
 
 if __name__ == "__main__":
