@@ -1,40 +1,67 @@
 import numpy as np
 import pandas as pd
 from typing import Tuple
-from sklearn.model_selection import train_test_split
 from ml.config import TARGET_COL, COLS_TO_DROP
+
+def _tukey_bounds(s: pd.Series, k: float = 1.5) -> Tuple[float, float]:
+    q1, q3 = s.quantile(0.25), s.quantile(0.75)
+    iqr = q3 - q1
+    return q1 - k * iqr, q3 + k * iqr
+
+def _tukey_mask_by_group(values: pd.Series, group: pd.Series, k: float = 1, min_group_size: int = 30) -> pd.Series:
+    """Tukey fences computed per group (e.g. per city), falling back to the
+    global fences for groups too small to estimate quartiles reliably."""
+    global_lower, global_upper = _tukey_bounds(values, k)
+
+    q1 = values.groupby(group).transform(lambda s: s.quantile(0.25))
+    q3 = values.groupby(group).transform(lambda s: s.quantile(0.75))
+    lower = q1 - k * (q3 - q1)
+    upper = q3 + k * (q3 - q1)
+
+    too_small = group.map(group.value_counts()) < min_group_size
+    lower = lower.where(~too_small, global_lower).fillna(global_lower)
+    upper = upper.where(~too_small, global_upper).fillna(global_upper)
+
+    return values.between(lower, upper)
 
 def prepare_data(df: pd.DataFrame, split_year: int) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
     
-    print("Preparing data pipeline (Random Split 80/20)...")
+    print(f"Preparing data pipeline (Temporal Split at {split_year})...")
     
     # ==========================================
-    # 1. Type Casting & Cleanup
+    # Type Casting & Cleanup
     # ==========================================
     
     # Drop columns that are 100% missing values (prevents the 0-category bug)
     df = df.dropna(axis=1, how='all')
 
     # ==========================================
-    # 0. Outlier Removal (הסרת עסקאות מסחריות, טעויות ומשפחה)
+    # Outlier Removal (הסרת עסקאות מסחריות, טעויות ומשפחה)
     # ==========================================
     initial_len = len(df)
-    
-    # 1. מסנן אבסולוטי: מחירים בין חצי מיליון ל-15 מיליון (מסנן משרדי ענק וטעויות)
-    valid_price_mask = (
-        (df['price_t0'] >= 500000) & (df['price_t0'] <= 15000000) &
-        (df['price_t1'] >= 500000) & (df['price_t1'] <= 15000000)
+
+    # Prices must be positive to take a log
+    df = df[(df['price_t0'] > 0) & (df['price_t1'] > 0)].copy()
+
+    # Price-level outliers: Tukey fences on log(price), per city.
+    # Log scale because prices are right-skewed; per-city because a "normal"
+    # price in Tel Aviv is a mansion-tier outlier in a periphery town.
+    log_price_t0 = np.log(df['price_t0'])
+    price_mask = (
+        _tukey_mask_by_group(log_price_t0, df['city_name'])
     )
-    df = df[valid_price_mask].copy()
-    
-    # how much did the price change
-    price_ratio = df['price_t1'] / df['price_t0']
-    
-    # removes anomalies where price changed by more than 4x or less than 0.6x 
-    logical_ratio_mask = (price_ratio >= 0.6) & (price_ratio <= 4.0)
-    df = df[logical_ratio_mask].copy()
-    
-    print(f"🧹 Removed {initial_len - len(df)} extreme price outliers (Commercial/Family/Typos).")
+    after_price = len(df[price_mask])
+    df = df[price_mask].copy()
+
+    # Price-change outliers: Tukey fences on the log price ratio.
+    # Catches family transfers / discounted or fabricated sales regardless of city.
+    log_ratio = np.log(df['price_t1'] / df['price_t0'])
+    ratio_mask = log_ratio.between(*_tukey_bounds(log_ratio))
+    df = df[ratio_mask].copy()
+
+    print(f"🧹 Removed {initial_len - after_price} price-level outliers and "
+          f"{after_price - len(df)} price-change outliers "
+          f"({initial_len - len(df)} total, Commercial/Family/Typos).")
     
     # Convert known categorical columns
     categorical_cols = ['city_name', 'location_accuracy']
@@ -71,26 +98,21 @@ def prepare_data(df: pd.DataFrame, split_year: int) -> Tuple[pd.DataFrame, pd.Da
     print(f"📊 Data Sparsity: {has_future_infra.sum()} out of {len(df)} properties had new infrastructure built nearby.")
         
     # ==========================================
-    # 2. Random Split (השיטה החדשה שלנו!)
+    # 2. Temporal Split (train on the past, test on "present")
     # ==========================================
-    
+
     # קודם כל מפרידים את המטרה (y) מהמאפיינים (X)
     cols_to_drop_safe = [c for c in COLS_TO_DROP if c in df.columns]
     X = df.drop(columns=cols_to_drop_safe)
     y = df[TARGET_COL]
-    
-    # SPLIT_YEAR = 2014
-    # TRAIN_START = 2010  # only recent history, macro conditions closer to test
 
-    # train_mask = (X['snapshot_year'] >= TRAIN_START) & (X['snapshot_year'] < SPLIT_YEAR)
-    # test_mask = X['snapshot_year'] >= SPLIT_YEAR
+    train_mask = df['snapshot_year'] < split_year
+    test_mask = df['snapshot_year'] >= split_year
 
-
-    # X_train = X[train_mask].copy()
-    # y_train = y[train_mask].copy()
-    # X_test = X[test_mask].copy()
-    # y_test = y[test_mask].copy()
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    X_train = X[train_mask].copy()
+    y_train = y[train_mask].copy()
+    X_test = X[test_mask].copy()
+    y_test = y[test_mask].copy()
     
     print(f"✅ Train set: {X_train.shape[0]} rows")
     print(f"✅ Test set:  {X_test.shape[0]} rows")
