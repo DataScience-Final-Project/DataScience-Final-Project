@@ -1,0 +1,173 @@
+=== FEATURE IMPORTANCE 10yr ===
+Loading data from database (Horizon: 10 years)...
+ Loaded 107244 property snapshots from DB.
+Preparing data pipeline (Temporal Split at 2009)...
+🧹 Removed 1624 price-level outliers and 3836 price-change outliers (5460 total, Commercial/Family/Typos).
+📊 Data Sparsity: 70114 out of 101784 properties had new infrastructure built nearby.
+✅ Train set: 51244 rows
+✅ Test set:  50540 rows
+
+--- Gain Importance (top 30) ---
+national_price_momentum    13.750847
+price_momentum             12.366187
+city_name                   3.615312
+log_price_t0                2.914081
+price_per_room              2.278191
+hotel_score_future          1.624677
+train_score_future          1.419850
+hotel_score_delta           1.299813
+train_score_delta           1.283564
+park_score_future           1.233289
+num_rooms                   1.209288
+supermarket_score_delta     1.146025
+hotel_score_now             1.081900
+total_poi_score_future      0.958489
+light_rail_score_delta      0.832166
+mall_score_future           0.772835
+building_year               0.763297
+hospital_score_future       0.753640
+supermarket_score_now       0.714303
+park_score_delta            0.613604
+hospital_score_delta        0.600855
+school_score_delta          0.599051
+park_score_now              0.584890
+light_rail_score_now        0.577793
+train_score_now             0.516572
+school_score_now            0.512941
+building_floors             0.510999
+kindergarten_score_now      0.510043
+bus_score_delta             0.508379
+mall_score_now              0.507314
+
+Written to data/feature_importance_10yr.csv
+=== OUTLIER ABLATION 5yr ===
+Loading raw data for 5-year horizon...
+Loading data from database (Horizon: 5 years)...
+ Loaded 168263 property snapshots from DB.
+
+name       rows_removed  mean_rmse   mean_mae    mean_r2
+🧹 Outlier filter disabled (apply_outlier_filter=False) — skipping Tukey filtering.
+📊 Data Sparsity: 76872 out of 168263 properties had new infrastructure built nearby.
+no_filter             0     0.2582     0.1932    -0.1817
+🧹 Removed 1251 price-level outliers and 5865 price-change outliers (7116 total, Commercial/Family/Typos).
+📊 Data Sparsity: 73001 out of 161147 properties had new infrastructure built nearby.
+current            7116     0.2099     0.1698    -0.4338
+🧹 Removed 33 price-level outliers and 3068 price-change outliers (3101 total, Commercial/Family/Typos).
+📊 Data Sparsity: 75003 out of 165162 properties had new infrastructure built nearby.
+looser             3101     0.2242     0.1790    -0.3816
+🧹 Removed 7313 price-level outliers and 12854 price-change outliers (20167 total, Commercial/Family/Typos).
+📊 Data Sparsity: 66317 out of 148096 properties had new infrastructure built nearby.
+stricter          20167     0.1850     0.1518    -0.4539
+=== OUTLIER ABLATION 10yr ===
+Loading raw data for 10-year horizon...
+Loading data from database (Horizon: 10 years)...
+ Loaded 107244 property snapshots from DB.
+
+name       rows_removed  mean_rmse   mean_mae    mean_r2
+🧹 Outlier filter disabled (apply_outlier_filter=False) — skipping Tukey filtering.
+📊 Data Sparsity: 74157 out of 107244 properties had new infrastructure built nearby.
+no_filter             0     0.2500     0.1814     0.1685
+🧹 Removed 1624 price-level outliers and 3836 price-change outliers (5460 total, Commercial/Family/Typos).
+📊 Data Sparsity: 70114 out of 101784 properties had new infrastructure built nearby.
+current            5460     0.1949     0.1533     0.1003
+🧹 Removed 201 price-level outliers and 1867 price-change outliers (2068 total, Commercial/Family/Typos).
+📊 Data Sparsity: 72510 out of 105176 properties had new infrastructure built nearby.
+looser             2068     0.2324     0.1814    -0.0691
+🧹 Removed 4123 price-level outliers and 8645 price-change outliers (12768 total, Commercial/Family/Typos).
+📊 Data Sparsity: 64838 out of 94476 properties had new infrastructure built nearby.
+stricter          12768     0.1578     0.1245     0.2592
+=== HYPERPARAM SEARCH 5yr ===
+Loading + cleaning data for 5-year horizon...
+Loading data from database (Horizon: 5 years)...
+ Loaded 168263 property snapshots from DB.
+🧹 Removed 1251 price-level outliers and 5865 price-change outliers (7116 total, Commercial/Family/Typos).
+📊 Data Sparsity: 73001 out of 161147 properties had new infrastructure built nearby.
+Evaluating 25 candidate param sets with 5-fold walk-forward CV...
+  [1/25] {'subsample': 0.9, 'min_child_weight': 4, 'max_depth': 5, 'learning_rate': 0.02, 'lambda': 5, 'gamma': 0, 'colsample_bytree': 0.8, 'alpha': 0.5}
+  [2/25] {'subsample': 0.8, 'min_child_weight': 12, 'max_depth': 5, 'learning_rate': 0.06, 'lambda': 10, 'gamma': 0.5, 'colsample_bytree': 1.0, 'alpha': 0.5}
+  [3/25] {'subsample': 0.8, 'min_child_weight': 4, 'max_depth': 4, 'learning_rate': 0.08, 'lambda': 10, 'gamma': 0.5, 'colsample_bytree': 0.8, 'alpha': 0.5}
+  [4/25] {'subsample': 0.9, 'min_child_weight': 8, 'max_depth': 4, 'learning_rate': 0.06, 'lambda': 10, 'gamma': 0.1, 'colsample_bytree': 1.0, 'alpha': 5}
+  [5/25] {'subsample': 0.9, 'min_child_weight': 1, 'max_depth': 6, 'learning_rate': 0.08, 'lambda': 2, 'gamma': 0.1, 'colsample_bytree': 0.6, 'alpha': 2}
+  [6/25] {'subsample': 1.0, 'min_child_weight': 1, 'max_depth': 6, 'learning_rate': 0.06, 'lambda': 10, 'gamma': 1, 'colsample_bytree': 0.6, 'alpha': 0.5}
+  [7/25] {'subsample': 0.9, 'min_child_weight': 12, 'max_depth': 5, 'learning_rate': 0.06, 'lambda': 5, 'gamma': 0.1, 'colsample_bytree': 0.6, 'alpha': 0.5}
+  [8/25] {'subsample': 0.8, 'min_child_weight': 12, 'max_depth': 6, 'learning_rate': 0.03, 'lambda': 2, 'gamma': 1, 'colsample_bytree': 0.8, 'alpha': 1}
+  [9/25] {'subsample': 0.7, 'min_child_weight': 8, 'max_depth': 6, 'learning_rate': 0.03, 'lambda': 2, 'gamma': 0.5, 'colsample_bytree': 0.8, 'alpha': 0}
+  [10/25] {'subsample': 0.8, 'min_child_weight': 8, 'max_depth': 4, 'learning_rate': 0.08, 'lambda': 5, 'gamma': 0, 'colsample_bytree': 1.0, 'alpha': 0.5}
+  [11/25] {'subsample': 0.9, 'min_child_weight': 20, 'max_depth': 6, 'learning_rate': 0.06, 'lambda': 1, 'gamma': 1, 'colsample_bytree': 0.4, 'alpha': 0.5}
+  [12/25] {'subsample': 0.7, 'min_child_weight': 20, 'max_depth': 5, 'learning_rate': 0.06, 'lambda': 10, 'gamma': 1, 'colsample_bytree': 1.0, 'alpha': 5}
+  [13/25] {'subsample': 0.9, 'min_child_weight': 1, 'max_depth': 3, 'learning_rate': 0.01, 'lambda': 3, 'gamma': 0.5, 'colsample_bytree': 0.5, 'alpha': 1}
+  [14/25] {'subsample': 0.6, 'min_child_weight': 8, 'max_depth': 4, 'learning_rate': 0.08, 'lambda': 5, 'gamma': 0.5, 'colsample_bytree': 0.6, 'alpha': 1}
+  [15/25] {'subsample': 0.8, 'min_child_weight': 12, 'max_depth': 5, 'learning_rate': 0.04, 'lambda': 5, 'gamma': 0.2, 'colsample_bytree': 0.8, 'alpha': 2}
+  [16/25] {'subsample': 0.6, 'min_child_weight': 12, 'max_depth': 6, 'learning_rate': 0.03, 'lambda': 5, 'gamma': 0.5, 'colsample_bytree': 0.6, 'alpha': 0}
+  [17/25] {'subsample': 0.6, 'min_child_weight': 12, 'max_depth': 5, 'learning_rate': 0.08, 'lambda': 5, 'gamma': 1, 'colsample_bytree': 0.5, 'alpha': 5}
+  [18/25] {'subsample': 0.6, 'min_child_weight': 20, 'max_depth': 3, 'learning_rate': 0.01, 'lambda': 5, 'gamma': 0.1, 'colsample_bytree': 1.0, 'alpha': 0}
+  [19/25] {'subsample': 0.9, 'min_child_weight': 8, 'max_depth': 3, 'learning_rate': 0.02, 'lambda': 5, 'gamma': 0.2, 'colsample_bytree': 0.6, 'alpha': 2}
+  [20/25] {'subsample': 1.0, 'min_child_weight': 1, 'max_depth': 6, 'learning_rate': 0.03, 'lambda': 2, 'gamma': 0.2, 'colsample_bytree': 0.5, 'alpha': 5}
+  [21/25] {'subsample': 0.8, 'min_child_weight': 1, 'max_depth': 4, 'learning_rate': 0.03, 'lambda': 5, 'gamma': 1, 'colsample_bytree': 0.6, 'alpha': 1}
+  [22/25] {'subsample': 1.0, 'min_child_weight': 12, 'max_depth': 5, 'learning_rate': 0.01, 'lambda': 1, 'gamma': 1, 'colsample_bytree': 0.5, 'alpha': 5}
+  [23/25] {'subsample': 1.0, 'min_child_weight': 4, 'max_depth': 3, 'learning_rate': 0.02, 'lambda': 2, 'gamma': 1, 'colsample_bytree': 0.5, 'alpha': 2}
+  [24/25] {'subsample': 0.7, 'min_child_weight': 12, 'max_depth': 4, 'learning_rate': 0.06, 'lambda': 2, 'gamma': 0.1, 'colsample_bytree': 0.8, 'alpha': 1}
+  [25/25] {'subsample': 0.6, 'min_child_weight': 4, 'max_depth': 5, 'learning_rate': 0.06, 'lambda': 1, 'gamma': 1, 'colsample_bytree': 0.6, 'alpha': 2}
+
+Best candidate (CV MAE=0.1687):
+{
+  "subsample": 0.9,
+  "min_child_weight": 1,
+  "max_depth": 6,
+  "learning_rate": 0.08,
+  "lambda": 2,
+  "gamma": 0.1,
+  "colsample_bytree": 0.6,
+  "alpha": 2
+}
+
+Full results written to data/hyperparam_search_results\5yr.json
+Review and manually copy winning params into config.py's XGB_PARAMS if satisfied.
+=== HYPERPARAM SEARCH 10yr ===
+Loading + cleaning data for 10-year horizon...
+Loading data from database (Horizon: 10 years)...
+ Loaded 107244 property snapshots from DB.
+🧹 Removed 1624 price-level outliers and 3836 price-change outliers (5460 total, Commercial/Family/Typos).
+📊 Data Sparsity: 70114 out of 101784 properties had new infrastructure built nearby.
+Evaluating 25 candidate param sets with 5-fold walk-forward CV...
+  [1/25] {'subsample': 0.9, 'min_child_weight': 4, 'max_depth': 5, 'learning_rate': 0.02, 'lambda': 5, 'gamma': 0, 'colsample_bytree': 0.8, 'alpha': 0.5}
+  [2/25] {'subsample': 0.8, 'min_child_weight': 12, 'max_depth': 5, 'learning_rate': 0.06, 'lambda': 10, 'gamma': 0.5, 'colsample_bytree': 1.0, 'alpha': 0.5}
+  [3/25] {'subsample': 0.8, 'min_child_weight': 4, 'max_depth': 4, 'learning_rate': 0.08, 'lambda': 10, 'gamma': 0.5, 'colsample_bytree': 0.8, 'alpha': 0.5}
+  [4/25] {'subsample': 0.9, 'min_child_weight': 8, 'max_depth': 4, 'learning_rate': 0.06, 'lambda': 10, 'gamma': 0.1, 'colsample_bytree': 1.0, 'alpha': 5}
+  [5/25] {'subsample': 0.9, 'min_child_weight': 1, 'max_depth': 6, 'learning_rate': 0.08, 'lambda': 2, 'gamma': 0.1, 'colsample_bytree': 0.6, 'alpha': 2}
+  [6/25] {'subsample': 1.0, 'min_child_weight': 1, 'max_depth': 6, 'learning_rate': 0.06, 'lambda': 10, 'gamma': 1, 'colsample_bytree': 0.6, 'alpha': 0.5}
+  [7/25] {'subsample': 0.9, 'min_child_weight': 12, 'max_depth': 5, 'learning_rate': 0.06, 'lambda': 5, 'gamma': 0.1, 'colsample_bytree': 0.6, 'alpha': 0.5}
+  [8/25] {'subsample': 0.8, 'min_child_weight': 12, 'max_depth': 6, 'learning_rate': 0.03, 'lambda': 2, 'gamma': 1, 'colsample_bytree': 0.8, 'alpha': 1}
+  [9/25] {'subsample': 0.7, 'min_child_weight': 8, 'max_depth': 6, 'learning_rate': 0.03, 'lambda': 2, 'gamma': 0.5, 'colsample_bytree': 0.8, 'alpha': 0}
+  [10/25] {'subsample': 0.8, 'min_child_weight': 8, 'max_depth': 4, 'learning_rate': 0.08, 'lambda': 5, 'gamma': 0, 'colsample_bytree': 1.0, 'alpha': 0.5}
+  [11/25] {'subsample': 0.9, 'min_child_weight': 20, 'max_depth': 6, 'learning_rate': 0.06, 'lambda': 1, 'gamma': 1, 'colsample_bytree': 0.4, 'alpha': 0.5}
+  [12/25] {'subsample': 0.7, 'min_child_weight': 20, 'max_depth': 5, 'learning_rate': 0.06, 'lambda': 10, 'gamma': 1, 'colsample_bytree': 1.0, 'alpha': 5}
+  [13/25] {'subsample': 0.9, 'min_child_weight': 1, 'max_depth': 3, 'learning_rate': 0.01, 'lambda': 3, 'gamma': 0.5, 'colsample_bytree': 0.5, 'alpha': 1}
+  [14/25] {'subsample': 0.6, 'min_child_weight': 8, 'max_depth': 4, 'learning_rate': 0.08, 'lambda': 5, 'gamma': 0.5, 'colsample_bytree': 0.6, 'alpha': 1}
+  [15/25] {'subsample': 0.8, 'min_child_weight': 12, 'max_depth': 5, 'learning_rate': 0.04, 'lambda': 5, 'gamma': 0.2, 'colsample_bytree': 0.8, 'alpha': 2}
+  [16/25] {'subsample': 0.6, 'min_child_weight': 12, 'max_depth': 6, 'learning_rate': 0.03, 'lambda': 5, 'gamma': 0.5, 'colsample_bytree': 0.6, 'alpha': 0}
+  [17/25] {'subsample': 0.6, 'min_child_weight': 12, 'max_depth': 5, 'learning_rate': 0.08, 'lambda': 5, 'gamma': 1, 'colsample_bytree': 0.5, 'alpha': 5}
+  [18/25] {'subsample': 0.6, 'min_child_weight': 20, 'max_depth': 3, 'learning_rate': 0.01, 'lambda': 5, 'gamma': 0.1, 'colsample_bytree': 1.0, 'alpha': 0}
+  [19/25] {'subsample': 0.9, 'min_child_weight': 8, 'max_depth': 3, 'learning_rate': 0.02, 'lambda': 5, 'gamma': 0.2, 'colsample_bytree': 0.6, 'alpha': 2}
+  [20/25] {'subsample': 1.0, 'min_child_weight': 1, 'max_depth': 6, 'learning_rate': 0.03, 'lambda': 2, 'gamma': 0.2, 'colsample_bytree': 0.5, 'alpha': 5}
+  [21/25] {'subsample': 0.8, 'min_child_weight': 1, 'max_depth': 4, 'learning_rate': 0.03, 'lambda': 5, 'gamma': 1, 'colsample_bytree': 0.6, 'alpha': 1}
+  [22/25] {'subsample': 1.0, 'min_child_weight': 12, 'max_depth': 5, 'learning_rate': 0.01, 'lambda': 1, 'gamma': 1, 'colsample_bytree': 0.5, 'alpha': 5}
+  [23/25] {'subsample': 1.0, 'min_child_weight': 4, 'max_depth': 3, 'learning_rate': 0.02, 'lambda': 2, 'gamma': 1, 'colsample_bytree': 0.5, 'alpha': 2}
+  [24/25] {'subsample': 0.7, 'min_child_weight': 12, 'max_depth': 4, 'learning_rate': 0.06, 'lambda': 2, 'gamma': 0.1, 'colsample_bytree': 0.8, 'alpha': 1}
+  [25/25] {'subsample': 0.6, 'min_child_weight': 4, 'max_depth': 5, 'learning_rate': 0.06, 'lambda': 1, 'gamma': 1, 'colsample_bytree': 0.6, 'alpha': 2}
+
+Best candidate (CV MAE=0.1515):
+{
+  "subsample": 0.6,
+  "min_child_weight": 20,
+  "max_depth": 3,
+  "learning_rate": 0.01,
+  "lambda": 5,
+  "gamma": 0.1,
+  "colsample_bytree": 1.0,
+  "alpha": 0
+}
+
+Full results written to data/hyperparam_search_results\10yr.json
+Review and manually copy winning params into config.py's XGB_PARAMS if satisfied.
+=== ALL DONE ===

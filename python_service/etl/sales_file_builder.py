@@ -13,7 +13,7 @@ SALES_DIR = Path(SALES_DIR)
 OUTPUT_CSV = Path(PROCESSED_DIR, 'sales_output.csv')
 
 def main():
-    # 1. קריאת כל 20 קבצי האקסל מתיקיית המכירות
+    # קריאת כל 20 קבצי האקסל מתיקיית המכירות
     files = sorted(SALES_DIR.glob("*.xlsx"))
     if not files:
         print("❌ No excel files found!")
@@ -26,7 +26,7 @@ def main():
     # נוודא שאין רווחים מיותרים בעמודת ה-POLYGON_ID (הגוש-חלקה)
     df_sales['POLYGON_ID'] = df_sales['POLYGON_ID'].astype(str).str.strip()
 
-    # 2. קריאת מפת החלקות של ישראל
+    # קריאת מפת החלקות של ישראל
     print(f"\n🗺️ Loading Israel Parcels Shapefile (this will take 1-2 minutes)...")
     try:
         parcels_gdf = gpd.read_file(SHAPE_DIR)
@@ -34,7 +34,7 @@ def main():
         print(f"❌ Failed to load Shapefile: {e}")
         return
 
-    # 3. יצירת מזהה זהה לקובץ המכירות (גוש-חלקה)
+    # יצירת מזהה זהה לקובץ המכירות (גוש-חלקה)
     print("⚙️ Processing coordinates...")
 
     # בדרך כלל בקבצי מפ"י העמודות נקראות GUSH_NUM ו- PARCEL
@@ -48,10 +48,10 @@ def main():
     parcels_gdf['MATCH_ID'] = parcels_gdf['GUSH_NUM'].astype(str).str.strip() + '-' + parcels_gdf['PARCEL'].astype(
         str).str.strip()
 
-    # 4. המרת קואורדינטות מ-ITM (ישראל) ל-WGS84 (GPS עולמי)
+    # המרת קואורדינטות מ-ITM (ישראל) ל-WGS84 (GPS עולמי)
     parcels_gdf = parcels_gdf.to_crs(epsg=4326)
 
-    # 5. מציאת נקודת המרכז של כל חלקה (Centroid)
+    # מציאת נקודת המרכז של כל חלקה (Centroid)
     # משתמשים ב-to_wkt כדי לוודא שאין שגיאות בפוליגונים ריקים
     centroids = parcels_gdf.geometry.centroid
     parcels_gdf['lon'] = centroids.x
@@ -60,7 +60,7 @@ def main():
     # שומרים רק את העמודות שאנחנו צריכים ומסירים כפילויות
     locations_df = parcels_gdf[['MATCH_ID', 'lat', 'lon']].drop_duplicates(subset=['MATCH_ID'])
 
-    # 6. הצלבה (Merge) בין 20 קבצי המכירות למפת החלקות
+    # הצלבה (Merge) בין 20 קבצי המכירות למפת החלקות
     print("\n🔗 Merging sales with precise coordinates...")
     final_df = pd.merge(df_sales, locations_df, left_on='POLYGON_ID', right_on='MATCH_ID', how='left')
 
@@ -69,7 +69,7 @@ def main():
     final_df.loc[mask, 'geom'] = "SRID=4326;POINT(" + final_df.loc[mask, 'lon'].astype(str) + " " + final_df.loc[
         mask, 'lat'].astype(str) + ")"
 
-    # 7. סיכום התוצאות
+    #  סיכום התוצאות
     found_count = mask.sum()
     missing_count = len(final_df) - found_count
     print(

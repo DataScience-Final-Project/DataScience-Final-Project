@@ -11,11 +11,12 @@ def load_snapshot_data(horizon: int) -> pd.DataFrame:
     engine = create_engine(db_url)
 
     query = f"""
-        SELECT * FROM property_features_snapshot
-        WHERE horizon_years = {horizon}
-          AND price_t0 IS NOT NULL 
-          AND price_t1 IS NOT NULL
-          AND log_change IS NOT NULL;
+        SELECT s.*, p.lat, p.lon FROM property_features_snapshot s
+        JOIN properties p ON s.property_id = p.property_id
+        WHERE s.horizon_years = {horizon}
+          AND s.price_t0 IS NOT NULL
+          AND s.price_t1 IS NOT NULL
+          AND s.log_change IS NOT NULL;
     """
     
     df = pd.read_sql_query(query, engine)
